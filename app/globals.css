@@ -1,0 +1,589 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Quill CSS */
+@import "quill/dist/quill.snow.css";
+
+
+
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0rem;
+
+    /* Chart colors */
+    --chart-1: 221.2 83.2% 53.3%;
+    --chart-2: 262.1 83.3% 57.8%;
+    --chart-3: 316.6 73.3% 52.5%;
+    --chart-4: 4.8 90.6% 58.4%;
+    --chart-5: 49.7 95.8% 46.7%;
+    --chart-6: 148.1 58.2% 32.2%;
+    --chart-7: 168.4 75.3% 41.2%;
+    --chart-8: 190.2 95.5% 38.6%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  html {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-background text-foreground h-full font-sans;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+.nepali-price::before {
+  content: "Rs. ";
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+/* Responsive utilities */
+.responsive-container {
+  @apply w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16;
+}
+
+.no-shadows * {
+  box-shadow: none !important;
+}
+
+.no-rounded * {
+  border-radius: 0 !important;
+}
+
+/* Product card hover effects */
+.product-card-hover {
+  @apply transition-all duration-300 hover:shadow-lg;
+}
+
+/* Button hover effects */
+.btn-hover-effect {
+  @apply transition-all duration-200 hover:scale-105;
+}
+
+/* Futuristic UI elements */
+.glow-effect {
+  @apply relative overflow-hidden;
+}
+
+.glow-effect::before {
+  content: "";
+  @apply absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-0 transition-opacity duration-300;
+}
+
+.glow-effect:hover::before {
+  @apply opacity-100;
+}
+
+.hover-scale {
+  @apply transition-transform duration-300 hover:scale-105;
+}
+
+.glass-effect {
+  @apply bg-background/80 backdrop-blur-md border border-white/20 dark:border-white/10;
+}
+
+.text-gradient {
+  @apply bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 dark:hover:shadow-primary/5;
+}
+
+/* 3D effect for cards */
+.card-3d {
+  @apply transition-all duration-300 hover:translate-y-[-5px] hover:shadow-xl;
+}
+
+/* Animated border */
+.animated-border {
+  @apply relative;
+}
+
+.animated-border::after {
+  content: "";
+  @apply absolute inset-0 rounded-md border-2 border-primary/50 opacity-0 transition-all duration-300;
+}
+
+.animated-border:hover::after {
+  @apply opacity-100 scale-105;
+}
+
+/* Holographic effect */
+.holographic {
+  @apply relative overflow-hidden;
+}
+
+/* .holographic::before {
+  content: "";
+  @apply absolute inset-0 bg-gradient-shine bg-[length:200%_200%] opacity-0 transition-opacity duration-500;
+  animation: shimmer 2.5s linear infinite;
+} */
+
+.holographic:hover::before {
+  @apply opacity-30;
+}
+
+/* Futuristic button */
+.btn-futuristic {
+  @apply relative overflow-hidden bg-gradient-to-r from-primary to-purple-600 text-white transition-all duration-300;
+}
+
+.btn-futuristic::before {
+  content: "";
+  @apply absolute inset-0 bg-white opacity-0 transition-opacity duration-300;
+}
+
+.btn-futuristic:hover::before {
+  @apply opacity-20;
+}
+
+/* Neon text effect */
+.neon-text {
+  @apply text-primary transition-all duration-300;
+  text-shadow: 0 0 5px theme("colors.primary.DEFAULT"), 0 0 10px theme("colors.primary.DEFAULT");
+}
+
+.neon-text:hover {
+  text-shadow: 0 0 5px theme("colors.primary.DEFAULT"), 0 0 10px theme("colors.primary.DEFAULT"), 0 0 15px theme("colors.primary.DEFAULT");
+}
+
+/* Modern animations */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600;
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+  h1 {
+    @apply text-2xl;
+  }
+
+  h2 {
+    @apply text-xl;
+  }
+
+  h3 {
+    @apply text-lg;
+  }
+}
+
+/* Hover card effect */
+.hover-card-effect {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-card-effect:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.dark .hover-card-effect:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+}
+
+
+
+/* 🌑 Custom dark mode styling for Quill Snow Theme */
+.ql-toolbar,
+.ql-container {
+  @apply border-slate-300 dark:border-slate-600;
+}
+
+.dark .ql-toolbar,
+.dark .ql-container {
+  @apply bg-slate-800 text-slate-100 border-slate-600;
+}
+
+.dark .ql-container .ql-editor {
+  @apply bg-slate-800 text-slate-100;
+}
+
+.dark .ql-picker-options {
+  @apply bg-slate-800 text-slate-100 border-slate-600;
+}
+
+.dark .ql-toolbar button:hover,
+.dark .ql-toolbar button.ql-active {
+  @apply text-slate-100 !important;
+}
+
+.dark .ql-toolbar .ql-stroke {
+  @apply stroke-slate-100;
+}
+
+.dark .ql-toolbar .ql-fill {
+  @apply fill-slate-100;
+}
+
+/* Additional Quill dark mode overrides */
+.dark .ql-picker-label {
+  @apply text-slate-100 border-slate-600;
+}
+
+.dark .ql-picker-item {
+  @apply text-slate-100 hover:bg-slate-700;
+}
+
+.dark .ql-tooltip {
+  @apply bg-slate-800 text-slate-100 border-slate-600;
+}
+
+.dark .ql-tooltip-arrow {
+  @apply border-slate-600;
+}
+
+.dark .ql-editor.ql-blank::before {
+  @apply text-slate-400;
+}
+
+
+.responsive-container {
+  @apply max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-20;
+}
+
+/* Remove shadows and rounded corners globally */
+.no-shadows,
+.no-shadows * {
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+}
+
+.no-rounded,
+.no-rounded * {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+}
+
+/* Enhanced typography system */
+.font-display {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-optical-sizing: auto;
+  font-variation-settings: 'slnt' 0;
+}
+
+.font-body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: -0.01em;
+}
+
+/* Enhanced button styles */
+.btn-enhanced {
+  @apply font-medium tracking-wide transition-all duration-300 transform hover:scale-105 active:scale-95;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+/* Comprehensive responsive text scaling */
+.text-responsive-xs {
+  @apply text-sm sm:text-base lg:text-lg;
+}
+
+.text-responsive-sm {
+  @apply text-base sm:text-lg lg:text-xl;
+}
+
+.text-responsive-base {
+  @apply text-lg sm:text-xl lg:text-2xl;
+}
+
+.text-responsive-lg {
+  @apply text-xl sm:text-2xl lg:text-3xl xl:text-4xl;
+}
+
+.text-responsive-xl {
+  @apply text-2xl sm:text-3xl lg:text-4xl xl:text-5xl;
+}
+
+.text-responsive-2xl {
+  @apply text-3xl sm:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl;
+}
+
+.text-responsive-3xl {
+  @apply text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl;
+}
+
+.text-responsive-4xl {
+  @apply text-5xl sm:text-6xl lg:text-7xl xl:text-8xl 2xl:text-9xl;
+}
+
+/* Enhanced spacing utilities */
+.space-responsive {
+  @apply space-y-4 sm:space-y-6 lg:space-y-8 xl:space-y-12;
+}
+
+.gap-responsive {
+  @apply gap-4 sm:gap-6 lg:gap-8 xl:gap-12;
+}
+
+.padding-responsive {
+  @apply p-4 sm:p-6 lg:p-8 xl:p-12 2xl:p-16;
+}
+
+.margin-responsive {
+  @apply m-4 sm:m-6 lg:m-8 xl:m-12 2xl:m-16;
+}
+
+/* Enhanced grid systems */
+.grid-responsive-1 {
+  @apply grid grid-cols-1;
+}
+
+.grid-responsive-2 {
+  @apply grid grid-cols-1 sm:grid-cols-2;
+}
+
+.grid-responsive-3 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.grid-responsive-4 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+.grid-responsive-5 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5;
+}
+
+.grid-responsive-6 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6;
+}
+
+/* Enhanced container utilities */
+.container-fluid {
+  @apply w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-20;
+}
+
+.container-tight {
+  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.container-wide {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-20;
+}
+
+/* Enhanced visual effects */
+.image-hover-effect {
+  @apply transition-all duration-700 hover:scale-110 hover:brightness-110;
+}
+
+.card-hover-enhanced {
+  @apply transition-all duration-500 hover:transform hover:scale-[1.02] hover:-translate-y-2;
+}
+
+.text-hover-effect {
+  @apply transition-all duration-300 hover:text-gray-600 hover:tracking-wide;
+}
+
+/* Modern animations */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.6s ease-out;
+}
+
+/* Staggered animations */
+.animate-stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.animate-stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.animate-stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.animate-stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.animate-stagger-5 {
+  animation-delay: 0.5s;
+}
