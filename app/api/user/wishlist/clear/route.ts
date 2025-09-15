@@ -15,7 +15,7 @@ export async function DELETE() {
 
     await dbConnect()
 
-    await Wishlist.deleteMany({ user: session.user.id })
+    await Wishlist.deleteMany({ user: session.user.id as string })
 
     return NextResponse.json({ message: "Wishlist cleared successfully" })
   } catch (error) {

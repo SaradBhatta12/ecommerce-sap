@@ -49,7 +49,6 @@ interface AddressFormProps {
 }
 
 export default function AddressForm({ initialData }: AddressFormProps) {
-  const { domain } = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -177,7 +176,7 @@ export default function AddressForm({ initialData }: AddressFormProps) {
         title: "Success",
         description: initialData ? "Address updated" : "Address added",
       });
-      router.push(`/${domain}/dashboard/addresses`);
+      router.push(`/dashboard/addresses`);
       router.refresh();
     } catch (error: any) {
       console.error(error);

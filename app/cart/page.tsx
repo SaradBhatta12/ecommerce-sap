@@ -25,7 +25,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
 import { useSelector, useDispatch } from "react-redux";
 
 import {
@@ -35,7 +34,8 @@ import {
   selectCartItems,
   addToWishlistAction
 } from "@/store";
-import { addToWishlist } from "@/lib/api-endpoints";
+import { addToWishlist } from "@/lib/api-endpoints"; 
+import {toast} from "sonner";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -48,16 +48,19 @@ import { useParams } from "next/navigation";
 export default function CartPage() {
   const { domain } = useParams();
   const router = useRouter();
-  const { toast } = useToast();
   const dispatch = useDispatch();
   const cartItems = useSelector(selectCartItems);
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+
     // Load recently viewed products from localStorage
     const loadRecentlyViewed = () => {
       if (typeof window !== "undefined") {
@@ -78,11 +81,8 @@ export default function CartPage() {
 
   const handleRemoveItem = (id: string, name: string) => {
     dispatch(removeFromCart(id));
-    toast({
-      title: "Item removed",
-      description: `${name} has been removed from your cart.`,
-    });
-  };
+    toast.success(`${name} has been removed from your cart.`);
+  };  
 
   const handleUpdateQuantity = (id: string, quantity: number) => {
     if (quantity < 1) return;
@@ -104,18 +104,12 @@ export default function CartPage() {
 
     dispatch(removeFromCart(item.id));
 
-    toast({
-      title: "Saved for later",
-      description: `${item.name} has been moved to your wishlist.`,
-    });
+    toast.success(`${item.name} has been moved to your wishlist.`);
   };
 
   const handleClearCart = () => {
     dispatch(clearCart());
-    toast({
-      title: "Cart cleared",
-      description: "All items have been removed from your cart.",
-    });
+    toast.success("All items have been removed from your cart.");       
   };
 
   const calculateSubtotal = () => {
@@ -130,29 +124,69 @@ export default function CartPage() {
     return subtotal - discount;
   };
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
 
     setIsApplyingCoupon(true);
 
-    // Simulate coupon validation
-    setTimeout(() => {
-      if (couponCode.toLowerCase() === "save10") {
-        const discountAmount = calculateSubtotal() * 0.1;
+    try {
+      const response = await fetch('/api/discounts/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: couponCode,
+          cartTotal: calculateSubtotal(),
+          cartItems: cartItems.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        const subtotal = calculateSubtotal();
+        let discountAmount = 0;
+
+        if (data.discount.type === 'percentage') {
+          discountAmount = (subtotal * data.discount.value) / 100;
+          if (data.discount.maxDiscount) {
+            discountAmount = Math.min(discountAmount, data.discount.maxDiscount);
+          }
+        } else {
+          discountAmount = data.discount.value;
+        }
+
+        // Check minimum purchase requirement
+        if (data.discount.minPurchase && subtotal < data.discount.minPurchase) {
+          toast.error(`This coupon requires a minimum purchase of Rs. ${data.discount.minPurchase.toLocaleString()}`);
+          setIsApplyingCoupon(false);
+          return;
+        }
+
         setDiscount(discountAmount);
-        toast({
-          title: "Coupon applied",
-          description: `You saved Rs. ${discountAmount.toLocaleString()}!`,
-        });
+        setAppliedDiscount(data.discount);
+        toast.success(`You saved Rs. ${discountAmount.toLocaleString()}!`);
       } else {
-        toast({
-          title: "Invalid coupon",
-          description: "The coupon code you entered is invalid or expired.",
-          variant: "destructive",
-        });
+        toast.error(data.message || "The coupon code you entered is invalid or expired.")
       }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      toast.error("Failed to apply coupon. Please try again.")
+    } finally {
       setIsApplyingCoupon(false);
-    }, 800);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setDiscount(0);
+    setAppliedDiscount(null);
+    setCouponCode("");
+    toast.success("The discount has been removed from your order.")
   };
 
   const getEstimatedDelivery = () => {
@@ -177,6 +211,20 @@ export default function CartPage() {
     }, 1000);
   };
 
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+          <div className="animate-pulse">
+            <ShoppingCart className="h-16 w-16 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground mt-4">Loading cart...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (cartItems.length === 0) {
     return (
       <div className="container mx-auto py-10 px-4">
@@ -192,7 +240,7 @@ export default function CartPage() {
             <Button>Continue Shopping</Button>
           </Link>
 
-          {recentlyViewed.length > 0 && (
+          {isMounted && recentlyViewed.length > 0 && (
             <div className="mt-16 w-full">
               <h2 className="text-xl font-semibold mb-4">Recently Viewed</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -420,13 +468,35 @@ export default function CartPage() {
                   </Button>
                 </div>
 
-                {discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span className="flex items-center">
-                      <Tag className="h-4 w-4 mr-1" />
-                      Discount
-                    </span>
-                    <span>- Rs. {discount.toLocaleString()}</span>
+                {discount > 0 && appliedDiscount && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-green-600">
+                      <span className="flex items-center">
+                        <Tag className="h-4 w-4 mr-1" />
+                        Discount ({appliedDiscount.code})
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span>- Rs. {discount.toLocaleString()}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveCoupon}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {appliedDiscount.type === 'percentage'
+                        ? `${appliedDiscount.value}% off`
+                        : `Rs. ${appliedDiscount.value} off`}
+                      {appliedDiscount.usageLimit && (
+                        <span className="ml-2">
+                          ({appliedDiscount.usageCount}/{appliedDiscount.usageLimit} used)
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 

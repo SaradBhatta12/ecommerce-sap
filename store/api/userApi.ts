@@ -108,6 +108,8 @@ interface WishlistItem {
     images: string[]
     stock: number
     category: {
+      toLowerCase(): unknown
+      toLowerCase(): unknown
       id: string
       name: string
     }
@@ -127,6 +129,21 @@ interface RemoveFromWishlistRequest {
   productId: string
 }
 
+interface NotificationPreferences {
+  email: boolean
+  marketing: boolean
+  orderUpdates: boolean
+  newProducts: boolean
+  wishlistReminders: boolean
+  priceDropAlerts: boolean
+  stockAlerts: boolean
+  reviewReminders: boolean
+}
+
+interface UpdateNotificationPreferencesRequest {
+  preferences: NotificationPreferences
+}
+
 const userApi = createApi({
   reducerPath: 'userApi',
   baseQuery: fetchBaseQuery({
@@ -140,7 +157,7 @@ const userApi = createApi({
       return headers
     },
   }),
-  tagTypes: ['User', 'Order', 'Address', 'Wishlist'],
+  tagTypes: ['User', 'Order', 'Address', 'Wishlist', 'Notifications'],
   endpoints: (builder) => ({
     // User profile endpoints
     getUserMe: builder.query<User, void>({
@@ -236,6 +253,21 @@ const userApi = createApi({
       }),
       invalidatesTags: ['Wishlist'],
     }),
+
+    // Notification preferences endpoints
+    getNotificationPreferences: builder.query<{ preferences: NotificationPreferences }, void>({
+      query: () => 'notifications',
+      providesTags: ['Notifications'],
+    }),
+
+    updateNotificationPreferences: builder.mutation<{ message: string; preferences: NotificationPreferences }, UpdateNotificationPreferencesRequest>({
+      query: (data) => ({
+        url: 'notifications',
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['Notifications'],
+    }),
   }),
 })
 
@@ -257,4 +289,6 @@ export const {
   useAddToWishlistMutation,
   useRemoveFromWishlistMutation,
   useClearWishlistMutation,
+  useGetNotificationPreferencesQuery,
+  useUpdateNotificationPreferencesMutation,
 } = userApi

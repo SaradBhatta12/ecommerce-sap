@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { useGetUserProfileQuery, useUpdateUserProfileMutation, useGetNotificationPreferencesQuery, useUpdateNotificationPreferencesMutation } from "@/store"
 
 interface UserProfile {
   name: string
@@ -43,12 +44,17 @@ interface PasswordData {
 
 export default function SettingsPage() {
   const { data: session, status, update } = useSession()
-  const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { toast } = useToast()
+  
+  // RTK Query hooks
+  const { data: profileData, isLoading: isProfileLoading, error: profileError } = useGetUserProfileQuery()
+  const { data: notificationData, isLoading: isNotificationLoading, error: notificationError } = useGetNotificationPreferencesQuery()
+  const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateUserProfileMutation()
+  const [updateNotifications, { isLoading: isUpdatingNotifications }] = useUpdateNotificationPreferencesMutation()
   
   const [formData, setFormData] = useState<UserProfile>({
     name: "",
@@ -74,42 +80,48 @@ export default function SettingsPage() {
     confirmPassword: "",
   })
 
-  // Fetch user profile data
-  const fetchUserProfile = async () => {
-    try {
-      const response = await fetch('/api/user/profile')
-      if (response.ok) {
-        const data = await response.json()
-        setFormData({
-          name: data.user.name || "",
-          email: data.user.email || "",
-          phone: data.user.phone || "",
-          image: data.user.image || "",
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error)
+  // Update form data when profile data is loaded
+  useEffect(() => {
+    if (profileData) {
+      setFormData({
+        name: profileData.name || "",
+        email: profileData.email || "",
+        phone: profileData.phone || "",
+        image: profileData.avatar || "",
+      })
     }
-  }
+  }, [profileData])
 
-  // Fetch notification preferences
-  const fetchNotificationPreferences = async () => {
-    try {
-      const response = await fetch('/api/user/notifications')
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data.preferences)
-      }
-    } catch (error) {
-      console.error('Error fetching notification preferences:', error)
+  // Update notifications when notification data is loaded
+  useEffect(() => {
+    if (notificationData?.preferences) {
+      setNotifications(notificationData.preferences)
     }
-  }
+  }, [notificationData])
+
+  // Handle errors
+  useEffect(() => {
+    if (profileError) {
+      toast({
+        title: "Error",
+        description: "Failed to load profile data.",
+        variant: "destructive",
+      })
+    }
+    if (notificationError) {
+      toast({
+        title: "Error",
+        description: "Failed to load notification preferences.",
+        variant: "destructive",
+      })
+    }
+  }, [profileError, notificationError, toast])
 
   // Refresh all data
   const refreshData = async () => {
     setIsRefreshing(true)
     try {
-      await Promise.all([fetchUserProfile(), fetchNotificationPreferences()])
+      // RTK Query will automatically refetch when we call the hooks again
       toast({
         title: "Data refreshed",
         description: "Your settings have been refreshed successfully.",
@@ -124,14 +136,6 @@ export default function SettingsPage() {
       setIsRefreshing(false)
     }
   }
-
-  // Load data on component mount
-  useEffect(() => {
-    if (session?.user) {
-      fetchUserProfile()
-      fetchNotificationPreferences()
-    }
-  }, [session])
 
   if (status === "loading") {
     return (
@@ -165,36 +169,26 @@ export default function SettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
 
     try {
-      const response = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
+      await updateProfile({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        avatar: formData.image,
+      }).unwrap()
 
-      if (response.ok) {
-        const data = await response.json()
-        await update({ name: formData.name, image: formData.image })
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully.",
-        })
-      } else {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to update profile')
-      }
-    } catch (error) {
+      await update({ name: formData.name, image: formData.image })
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      })
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        description: error?.data?.message || "Something went wrong. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -219,38 +213,25 @@ export default function SettingsPage() {
       return
     }
 
-    setIsLoading(true)
+
 
     try {
-      const response = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        }),
-      })
+      await updateProfile({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      }).unwrap()
 
-      if (response.ok) {
-        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
-        toast({
-          title: "Password updated",
-          description: "Your password has been updated successfully.",
-        })
-      } else {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to update password')
-      }
-    } catch (error) {
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully.",
+      })
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        description: error?.data?.message || "Something went wrong. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -259,24 +240,15 @@ export default function SettingsPage() {
     setNotifications(updatedNotifications)
 
     try {
-      const response = await fetch('/api/user/notifications', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ preferences: updatedNotifications }),
-      })
-
-      if (!response.ok) {
-        // Revert on error
-        setNotifications(notifications)
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to update notifications')
-      }
-    } catch (error) {
+      await updateNotifications({
+        preferences: updatedNotifications
+      }).unwrap()
+    } catch (error: any) {
+      // Revert on error
+      setNotifications(notifications)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update notification preferences.",
+        description: error?.data?.message || "Failed to update notification preferences.",
         variant: "destructive",
       })
     }
@@ -329,7 +301,7 @@ export default function SettingsPage() {
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-6">
-                {isLoading ? (
+                {isProfileLoading ? (
                   <div className="space-y-4">
                     <div className="flex items-center space-x-4">
                       <Skeleton className="h-20 w-20 rounded-full" />
@@ -400,8 +372,8 @@ export default function SettingsPage() {
                 )}
               </CardContent>
               <CardFooter>
-                <Button type="submit" disabled={isLoading || !formData.name.trim()}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={isUpdatingProfile || !formData.name.trim()}>
+                  {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
                 </Button>
               </CardFooter>
@@ -415,7 +387,7 @@ export default function SettingsPage() {
               <CardDescription>Choose what notifications you want to receive via email.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {isLoading ? (
+              {isNotificationLoading ? (
                 <div className="space-y-4">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="flex items-center justify-between">
@@ -657,12 +629,12 @@ export default function SettingsPage() {
                   
                   <div className="flex gap-2 pt-4">
                     <Button 
-                      type="submit" 
-                      disabled={isLoading || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || passwordData.newPassword !== passwordData.confirmPassword}
-                    >
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Change Password
-                    </Button>
+                       type="submit" 
+                       disabled={isUpdatingProfile || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || passwordData.newPassword !== passwordData.confirmPassword}
+                     >
+                       {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                       Change Password
+                     </Button>
                     
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-// Store functionality removed
+import { useGetWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store"
 
 interface ProductDetailsProps {
   product: any
@@ -22,28 +22,14 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   // Store functionality removed
   const { toast } = useToast()
   const [quantity, setQuantity] = useState(1)
-  const [isAddingToWishlist, setIsAddingToWishlist] = useState(false)
-  const [isInWishlist, setIsInWishlist] = useState(false)
+  // RTK Query hooks for wishlist operations
+  const { data: wishlistData } = useGetWishlistQuery()
+  const [addToWishlist, { isLoading: isAddingToWishlist }] = useAddToWishlistMutation()
+  const [removeFromWishlist, { isLoading: isRemovingFromWishlist }] = useRemoveFromWishlistMutation()
 
-  // Check if product is in wishlist on component mount
-  useEffect(() => {
-    if (session) {
-      checkWishlistStatus()
-    }
-  }, [session, product._id])
-
-  const checkWishlistStatus = async () => {
-    try {
-      const response = await fetch("/api/user/wishlist")
-      if (!response.ok) return
-
-      const items = await response.json()
-      const isInList = items.some((item: any) => item.product._id === product._id)
-      setIsInWishlist(isInList)
-    } catch (error) {
-      console.error("Error checking wishlist status:", error)
-    }
-  }
+  // Check if product is in wishlist
+  const isInWishlist = wishlistData?.wishlist?.some((item: any) => item.product._id === product._id) || false
+  const isWishlistLoading = isAddingToWishlist || isRemovingFromWishlist
 
   const handleAddToCart = () => {
     // Cart functionality removed
@@ -64,35 +50,17 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
       return
     }
 
-    setIsAddingToWishlist(true)
-
     try {
       if (isInWishlist) {
         // Remove from wishlist
-        const response = await fetch(`/api/user/wishlist?productId=${product._id}`, {
-          method: "DELETE",
-        })
-
-        if (!response.ok) throw new Error("Failed to remove from wishlist")
-
-        setIsInWishlist(false)
+        await removeFromWishlist({ productId: product._id }).unwrap()
         toast({
           title: "Removed from wishlist",
           description: `${product.name} has been removed from your wishlist.`,
         })
       } else {
         // Add to wishlist
-        const response = await fetch("/api/user/wishlist", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ productId: product._id }),
-        })
-
-        if (!response.ok) throw new Error("Failed to add to wishlist")
-
-        setIsInWishlist(true)
+        await addToWishlist({ productId: product._id }).unwrap()
         toast({
           title: "Added to wishlist",
           description: `${product.name} has been added to your wishlist.`,
@@ -105,8 +73,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         description: "Failed to update wishlist. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setIsAddingToWishlist(false)
     }
   }
 
@@ -240,7 +206,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             variant="outline"
             className={`${isInWishlist ? "text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20" : ""}`}
             onClick={handleToggleWishlist}
-            disabled={isAddingToWishlist}
+            disabled={isWishlistLoading}
           >
             <Heart className={`mr-2 h-4 w-4 ${isInWishlist ? "fill-red-500" : ""}`} />
             {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}

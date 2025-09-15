@@ -4,10 +4,13 @@ import Discount from "@/models/discount"
 
 export async function POST(request: Request) {
   try {
-    const { code, cartTotal, items } = await request.json()
+    const { code, cartTotal, cartItems } = await request.json()
 
     if (!code) {
-      return NextResponse.json({ error: "Discount code is required" }, { status: 400 })
+      return NextResponse.json({ 
+        valid: false, 
+        message: "Discount code is required" 
+      }, { status: 400 })
     }
 
     // Connect to database
@@ -22,19 +25,26 @@ export async function POST(request: Request) {
     }).lean()
 
     if (!discount) {
-      return NextResponse.json({ error: "Invalid or expired discount code" }, { status: 404 })
+      return NextResponse.json({ 
+        valid: false, 
+        message: "Invalid or expired discount code" 
+      }, { status: 404 })
     }
 
     // Check usage limit
-    if (discount.usageLimit && discount.usedCount >= discount.usageLimit) {
-      return NextResponse.json({ error: "Discount usage limit reached" }, { status: 400 })
+    if (discount.usageLimit && discount.usageCount >= discount.usageLimit) {
+      return NextResponse.json({ 
+        valid: false, 
+        message: "This discount code has reached its usage limit" 
+      }, { status: 400 })
     }
 
     // Check minimum purchase
     if (discount.minPurchase && cartTotal < discount.minPurchase) {
       return NextResponse.json(
         {
-          error: `Minimum purchase amount of NPR ${discount.minPurchase} required`,
+          valid: false,
+          message: `Minimum purchase of Rs. ${discount.minPurchase.toLocaleString()} required for this discount`,
         },
         { status: 400 },
       )
@@ -65,11 +75,19 @@ export async function POST(request: Request) {
         code: discount.code,
         type: discount.type,
         value: discount.value,
-        discountAmount: Math.round(discountAmount),
+        minPurchase: discount.minPurchase,
+        maxDiscount: discount.maxDiscount,
+        usageCount: discount.usageCount,
+        usageLimit: discount.usageLimit,
       },
+      discountAmount: Math.round(discountAmount),
+      message: "Discount code applied successfully",
     })
   } catch (error) {
     console.error("Error validating discount:", error)
-    return NextResponse.json({ error: "Failed to validate discount" }, { status: 500 })
+    return NextResponse.json({ 
+      valid: false, 
+      message: "Failed to validate discount code" 
+    }, { status: 500 })
   }
 }

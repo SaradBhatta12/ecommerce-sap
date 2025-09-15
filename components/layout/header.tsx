@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSelector } from "react-redux";
+import { useGetWishlistQuery } from "@/store/api/userApi";
 
 function Header() {
   const [isClient, setIsClient] = useState(false);
@@ -33,6 +34,11 @@ function Header() {
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Get wishlist count for authenticated users
+  const { data: wishlistItems = [] } = useGetWishlistQuery(undefined, {
+    skip: !session?.user?.email
+  });
 
   // Prevent hydration mismatch by ensuring client-side rendering
   useEffect(() => {
@@ -52,6 +58,14 @@ function Header() {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/shop?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleWishlistClick = () => {
+    if (!session) {
+      router.push("/auth/login?callbackUrl=/wishlist");
+    } else {
+      router.push("/dashboard/wishlist");
     }
   };
 
@@ -111,6 +125,18 @@ function Header() {
             <div className="flex items-center gap-2 sm:gap-4">
               <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200" disabled>
                 <Search className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="p-2 hover:bg-gray-100 transition-colors duration-200 relative"
+                onClick={handleWishlistClick}
+                disabled
+              >
+                <Heart className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 bg-black text-white text-xs h-5 w-5 flex items-center justify-center font-medium">
+                  0
+                </span>
               </Button>
               <Link href="/cart">
                 <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200 relative">
@@ -187,6 +213,19 @@ function Header() {
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
               >
                 <Search className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="p-2 hover:bg-gray-100 transition-colors duration-200 relative"
+                onClick={handleWishlistClick}
+              >
+                <Heart className="h-5 w-5" />
+                {isClient && session && wishlistItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs h-5 w-5 flex items-center justify-center font-medium">
+                    {wishlistItems.length}
+                  </span>
+                )}
               </Button>
               <Link href="/cart">
                 <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200 relative">

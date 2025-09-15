@@ -28,40 +28,36 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
 import { toast } from "sonner";
+import { useGetUserOrdersQuery } from "@/store/api/userApi";
 
 
 export default function OrdersPage() {
   // Multi-tenant functionality removed - no domain parameter needed
   const { data: session, status } = useSession();
-  const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
   const [limit, setLimit] = useState(10);
 
-  const GetOrders = async () => {
-    try {
-      setIsLoading(true);
-      const res = await axios.get("/api/orders");
-      setOrders(res.data.orders);
-      setTotalOrders(res.data.pagination.total);
-      setTotalPages(res.data.pagination.pages);
-      setIsLoading(false);
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to fetch orders");
-    }
-  };
+  // RTK Query hook for fetching orders
+  const {
+    data: ordersData,
+    isLoading,
+    error,
+    refetch,
+  } = useGetUserOrdersQuery();
 
-  useEffect(() => {
-    GetOrders();
-  }, [currentPage]);
+  const orders = ordersData?.orders || [];
+  const totalOrders = ordersData?.pagination?.total || 0;
+  const totalPages = ordersData?.pagination?.pages || 1;
+
+  if (error) {
+    toast.error("Failed to fetch orders");
+  }
+
+  // RTK Query automatically handles data fetching
 
   const filteredOrders = orders?.filter((order) => {
     // Filter by status

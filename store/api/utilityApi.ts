@@ -141,7 +141,7 @@ const utilityApi = createApi({
         method: 'POST',
         body: orderData,
       }),
-      invalidatesTags: ['Order'],
+      invalidatesTags: ['Order', 'Product'], // Invalidate products to refresh stock
     }),
   }),
 })

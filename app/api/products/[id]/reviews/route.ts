@@ -5,9 +5,10 @@ import dbConnect from "@/lib/db-connect"
 import Review from "@/models/review"
 import Product from "@/models/product"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const productId = params.id
+    const { id } = await params
+    const productId = id
 
     // Connect to database
     await dbConnect()
@@ -25,7 +26,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -33,7 +34,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const productId = params.id
+    const { id } = await params
+    const productId = id
     const { rating, title, content, images = [] } = await request.json()
 
     // Validate input

@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-// Store functionality removed
+import { useGetWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store";
 
 interface Product {
   _id: string;
@@ -25,6 +25,14 @@ interface Product {
   discount?: number;
   discountPrice?: number;
   slug: string;
+  stock?: number;
+  applicableDiscounts?: {
+    _id: string;
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    isActive: boolean;
+  }[];
 }
 
 interface ProductCardProps {
@@ -37,33 +45,17 @@ export default function ProductCard({
   isWishlist = false,
 }: ProductCardProps) {
   const { data: session } = useSession();
-  const [isInWishlist, setIsInWishlist] = useState(isWishlist);
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  // Domain functionality removed
+  
+  // RTK Query hooks for wishlist operations
+  const { data: wishlistData } = useGetWishlistQuery();
+  const [addToWishlist, { isLoading: isAddingToWishlist }] = useAddToWishlistMutation();
+  const [removeFromWishlist, { isLoading: isRemovingFromWishlist }] = useRemoveFromWishlistMutation();
 
-  // Check if product is in wishlist on component mount
-  useEffect(() => {
-    if (session && !isWishlist) {
-      checkWishlistStatus();
-    }
-  }, [session, product._id, isWishlist]);
-
-  const checkWishlistStatus = async () => {
-    try {
-      const response = await fetch("/api/user/wishlist");
-      if (!response.ok) return;
-
-      const items = await response.json();
-      const isInList = items?.some(
-        (item: any) => item.product._id === product._id
-      );
-      setIsInWishlist(isInList);
-    } catch (error) {
-      console.error("Error checking wishlist status:", error);
-    }
-  };
+  // Check if product is in wishlist
+  const isInWishlist = isWishlist || wishlistData?.wishlist?.some((item: any) => item.product._id === product._id) || false;
+  const isLoading = isAddingToWishlist || isRemovingFromWishlist;
 
   const handleAddToCart = () => {
     // Cart functionality removed
@@ -86,38 +78,17 @@ export default function ProductCard({
       return;
     }
 
-    setIsLoading(true);
-
     try {
       if (isInWishlist) {
         // Remove from wishlist
-        const response = await fetch(
-          `/api/user/wishlist?productId=${product._id}`,
-          {
-            method: "DELETE",
-          }
-        );
-
-        if (!response.ok) throw new Error("Failed to remove from wishlist");
-
-        setIsInWishlist(false);
+        await removeFromWishlist({ productId: product._id }).unwrap();
         toast({
           title: "Removed from wishlist",
           description: `${product.name} has been removed from your wishlist.`,
         });
       } else {
         // Add to wishlist
-        const response = await fetch("/api/user/wishlist", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ productId: product._id }),
-        });
-
-        if (!response.ok) throw new Error("Failed to add to wishlist");
-
-        setIsInWishlist(true);
+        await addToWishlist({ productId: product._id }).unwrap();
         toast({
           title: "Added to wishlist",
           description: `${product.name} has been added to your wishlist.`,
@@ -130,16 +101,33 @@ export default function ProductCard({
         description: "Failed to update wishlist. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
-  const discountedPrice =
-    product.discountPrice ||
-    (product.isOnSale && product.discount
-      ? product.price - (product.price * product.discount) / 100
-      : product.price);
+  // Calculate discount price from applicable discounts
+  const calculateDiscountedPrice = () => {
+    if (product.discountPrice) return product.discountPrice;
+    
+    // Check for active discounts
+    const activeDiscount = product.applicableDiscounts?.find(d => d.isActive);
+    if (activeDiscount) {
+      if (activeDiscount.type === 'percentage') {
+        return product.price - (product.price * activeDiscount.value) / 100;
+      } else {
+        return Math.max(0, product.price - activeDiscount.value);
+      }
+    }
+    
+    // Fallback to legacy discount
+    if (product.isOnSale && product.discount) {
+      return product.price - (product.price * product.discount) / 100;
+    }
+    
+    return product.price;
+  };
+  
+  const discountedPrice = calculateDiscountedPrice();
+  const hasDiscount = discountedPrice < product.price;
+  const discountPercentage = hasDiscount ? Math.round(((product.price - discountedPrice) / product.price) * 100) : 0;
 
   // Generate random image for better visual appeal
   const randomImages = [
@@ -185,12 +173,35 @@ export default function ProductCard({
           </h3>
         </Link>
         
-        <div className="text-right">
-          <span className="text-lg font-medium text-black">
-            $ {product.price}
-          </span>
+        <div className="text-right space-y-1">
+          {hasDiscount ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-sm text-gray-500 line-through">
+                  $ {product.price.toFixed(2)}
+                </span>
+                <Badge variant="destructive" className="text-xs">
+                  -{discountPercentage}%
+                </Badge>
+              </div>
+              <span className="text-lg font-medium text-red-600">
+                $ {discountedPrice.toFixed(2)}
+              </span>
+            </div>
+          ) : (
+            <span className="text-lg font-medium text-black">
+              $ {product.price.toFixed(2)}
+            </span>
+          )}
+          {product.stock !== undefined && product.stock < 10 && (
+            <div className="text-xs text-orange-600">
+              Only {product.stock} left!
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
 }

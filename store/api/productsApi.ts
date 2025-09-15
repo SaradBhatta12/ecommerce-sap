@@ -41,6 +41,13 @@ interface Product {
   status: 'published' | 'draft'
   isNew: boolean
   isFeatured: boolean
+  applicableDiscounts?: Array<{
+    id: string
+    code: string
+    type: 'percentage' | 'fixed'
+    value: number
+    maxDiscount?: number
+  }>
   createdAt: string
 }
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ArrowUpIcon,
@@ -10,9 +9,16 @@ import {
   ShoppingCart,
   CreditCard,
 } from "lucide-react";
+import { useGetStatsQuery } from "@/store/api/adminApi";
 
 export function AdminStats() {
-  const [stats, setStats] = useState({
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useGetStatsQuery();
+
+  const statsData = stats || {
     totalRevenue: 0,
     totalOrders: 0,
     totalProducts: 0,
@@ -21,27 +27,14 @@ export function AdminStats() {
     ordersChange: 0,
     productsChange: 0,
     customersChange: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch("/api/admin/stats");
-        const data = await response.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Failed to fetch admin stats:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
+  };
 
   if (isLoading) {
     return null;
+  }
+
+  if (error) {
+    console.error("Failed to fetch admin stats:", error);
   }
 
   return (
@@ -53,10 +46,10 @@ export function AdminStats() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold nepali-price">
-            {stats?.totalRevenue?.toLocaleString()}
+            {statsData?.totalRevenue?.toLocaleString()}
           </div>
           <p className="text-xs text-muted-foreground">
-            {stats.revenueChange > 0 ? (
+            {statsData.revenueChange > 0 ? (
               <span className="text-green-600 flex items-center">
                 <ArrowUpIcon className="mr-1 h-4 w-4" />
                 {stats.revenueChange}% from last month
@@ -64,7 +57,7 @@ export function AdminStats() {
             ) : (
               <span className="text-red-600 flex items-center">
                 <ArrowDownIcon className="mr-1 h-4 w-4" />
-                {Math.abs(stats.revenueChange)}% from last month
+                {Math.abs(statsData.revenueChange)}% from last month
               </span>
             )}
           </p>
@@ -76,17 +69,17 @@ export function AdminStats() {
           <ShoppingCart className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalOrders}</div>
+          <div className="text-2xl font-bold">{statsData.totalOrders}</div>
           <p className="text-xs text-muted-foreground">
-            {stats.ordersChange > 0 ? (
+            {statsData.ordersChange > 0 ? (
               <span className="text-green-600 flex items-center">
                 <ArrowUpIcon className="mr-1 h-4 w-4" />
-                {stats.ordersChange}% from last month
+                {statsData.ordersChange}% from last month
               </span>
             ) : (
               <span className="text-red-600 flex items-center">
                 <ArrowDownIcon className="mr-1 h-4 w-4" />
-                {Math.abs(stats.ordersChange)}% from last month
+                {Math.abs(statsData.ordersChange)}% from last month
               </span>
             )}
           </p>
@@ -98,17 +91,17 @@ export function AdminStats() {
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalProducts}</div>
+          <div className="text-2xl font-bold">{statsData.totalProducts}</div>
           <p className="text-xs text-muted-foreground">
-            {stats.productsChange > 0 ? (
+            {statsData.productsChange > 0 ? (
               <span className="text-green-600 flex items-center">
                 <ArrowUpIcon className="mr-1 h-4 w-4" />
-                {stats.productsChange}% from last month
+                {statsData.productsChange}% from last month
               </span>
             ) : (
               <span className="text-red-600 flex items-center">
                 <ArrowDownIcon className="mr-1 h-4 w-4" />
-                {Math.abs(stats.productsChange)}% from last month
+                {Math.abs(statsData.productsChange)}% from last month
               </span>
             )}
           </p>
@@ -120,17 +113,17 @@ export function AdminStats() {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+          <div className="text-2xl font-bold">{statsData.totalCustomers}</div>
           <p className="text-xs text-muted-foreground">
-            {stats.customersChange > 0 ? (
+            {statsData.customersChange > 0 ? (
               <span className="text-green-600 flex items-center">
                 <ArrowUpIcon className="mr-1 h-4 w-4" />
-                {stats.customersChange}% from last month
+                {statsData.customersChange}% from last month
               </span>
             ) : (
               <span className="text-red-600 flex items-center">
                 <ArrowDownIcon className="mr-1 h-4 w-4" />
-                {Math.abs(stats.customersChange)}% from last month
+                {Math.abs(statsData.customersChange)}% from last month
               </span>
             )}
           </p>

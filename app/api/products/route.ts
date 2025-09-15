@@ -56,8 +56,11 @@ export async function GET(request: Request) {
       query.status = status;
     }
 
-    if (category) {
-      query.category = category;
+    if (category && category !== "undefined" && category !== "null") {
+      // Validate ObjectId format
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        query.category = category;
+      }
     }
 
     if (brand) {

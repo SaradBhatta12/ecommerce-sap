@@ -23,22 +23,64 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
+import { 
+  useGetUserAddressesQuery,
+  useCreateOrderMutation,
+  useValidateDiscountMutation,
+  useApplyDiscountMutation
+} from "@/store";
+import type { RootState } from "@/store";
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+}
+
+interface Address {
+  _id: string;
+  fullName: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  phone: string;
+  isDefault: boolean;
+}
+
+interface Discount {
+  _id: string;
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  discountAmount: number;
+}
 
 export default function CheckoutPage() {
   const { domain } = useParams();
   const { data: session, status } = useSession();
   const router = useRouter();
   const dispatch = useDispatch();
-  const cartItems = useSelector((state) => state?.cart?.items);
-  const [addresses, setAddresses] = useState([]);
+  const cartItems = useSelector((state: RootState) => state?.cart?.items) as CartItem[];
+  
+  // RTK Query hooks
+  const { data: addressesData, isLoading: addressesLoading, refetch: refetchAddresses } = useGetUserAddressesQuery(undefined, {
+    skip: status !== "authenticated"
+  });
+  const [createOrder, { isLoading: isCreatingOrder }] = useCreateOrderMutation();
+  const [validateDiscount, { isLoading: isValidatingDiscount }] = useValidateDiscountMutation();
+  const [applyDiscount] = useApplyDiscountMutation();
+  
+  // Local state
   const [selectedAddress, setSelectedAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("esewa");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
-  const [discount, setDiscount] = useState(null);
-  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [discount, setDiscount] = useState<Discount | null>(null);
   const [discountError, setDiscountError] = useState("");
+  
+  const addresses = addressesData?.addresses as Address[] || [];
   // Calculate totals
   const subtotal = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -53,86 +95,50 @@ export default function CheckoutPage() {
       router.push("/auth?callbackUrl=/checkout");
     } else if (status === "authenticated" && cartItems.length === 0) {
       router.push("/cart");
-    } else if (status === "authenticated") {
-      fetchAddresses();
     }
   }, [status, cartItems.length, router]);
 
-  const fetchAddresses = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch("/api/user/addresses", {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        toast.error("Failed to fetch addresses");
-        return;
-      }
-
-      const data = await response.json();
-      setAddresses(Array.from(data.addresses));
-
-      // Set default address if available
-
-      const defaultAddress = Array.from(data.addresses)?.find(
-        (addr: any) => addr.isDefault
-      );
+  // Set default address when addresses are loaded
+  useEffect(() => {
+    if (addresses.length > 0 && !selectedAddress) {
+      const defaultAddress = addresses.find((addr) => addr.isDefault);
       if (defaultAddress) {
         setSelectedAddress(defaultAddress._id);
-      } else if (data?.addresses?.length > 0) {
-        setSelectedAddress(data.addresses[0]._id);
+      } else {
+        setSelectedAddress(addresses[0]._id);
       }
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-      toast.error("Failed to fetch addresses. Please try again.");
-      setAddresses([]);
-      setSelectedAddress("");
-    } finally {
-      setIsLoading(false);
     }
-  };
-  useEffect(() => {
-    fetchAddresses();
-  }, []);
+  }, [addresses, selectedAddress]);
 
   const handleApplyDiscount = async () => {
     if (!discountCode.trim()) return;
 
     try {
-      setIsApplyingDiscount(true);
       setDiscountError("");
+      
+      const result = await validateDiscount({
+        code: discountCode,
+        cartTotal: subtotal,
+        items: cartItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+      }).unwrap();
 
-      const response = await fetch("/api/discounts/validate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code: discountCode,
-          cartTotal: subtotal,
-          items: cartItems.map((item) => item.id),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setDiscountError(data.error || "Invalid discount code");
+      if (result.valid && result.discount) {
+        setDiscount(result.discount as Discount);
+        toast.success("Discount applied successfully!");
+        setDiscountCode("");
+        setDiscountError("");
+      } else {
+        setDiscountError(result.message || "Invalid discount code");
         setDiscount(null);
-        return;
       }
-
-      setDiscount(data.discount);
-      toast.error("Discount applied successfully!");
-      setDiscountCode("");
-      setDiscountError("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error applying discount:", error);
-      setDiscountError("Failed to apply discount. Please try again.");
-    } finally {
-      setIsApplyingDiscount(false);
+      setDiscountError(error?.data?.error || "Failed to apply discount. Please try again.");
+      setDiscount(null);
     }
   };
 
@@ -151,70 +157,58 @@ export default function CheckoutPage() {
     }
 
     if (!paymentMethod) {
-      toast.error("payment method Required");
+      toast.error("Payment method Required");
       return;
     }
 
     try {
-      setIsProcessing(true);
-
       // Create order
-      const orderResponse = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          addressId: selectedAddress,
-          paymentMethod,
-          items: cartItems,
-          subtotal,
-          shipping,
-          discount: discount
-            ? {
-              id: discount._id,
-              code: discount.code,
-              amount: discount.discountAmount,
-            }
-            : null,
-          total,
-        }),
-      });
-
-      if (!orderResponse.ok) {
-        const error = await orderResponse.json();
-        throw new Error(error.message || "Failed to create order");
-      }
-
-      const orderData = await orderResponse.json();
+      const orderResult = await createOrder({
+        addressId: selectedAddress,
+        paymentMethod,
+        items: cartItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        subtotal,
+        shipping,
+        discount: discount
+          ? {
+            id: discount._id,
+            code: discount.code,
+            amount: discount.discountAmount,
+          }
+          : null,
+        total,
+      }).unwrap();
 
       // Apply discount if used
       if (discount) {
-        await fetch("/api/discounts/apply", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        try {
+          await applyDiscount({
             discountId: discount._id,
-          }),
-        });
+          }).unwrap();
+        } catch (discountError) {
+          console.warn("Failed to apply discount usage:", discountError);
+          // Don't fail the entire checkout for discount application issues
+        }
       }
 
       // Clear cart
       dispatch(clearCart());
 
       // Redirect to success page
-      router.push(`/${domain}/checkout/success?orderId=${orderData.order._id}`);
-    } catch (error) {
+      router.push(`/${domain}/checkout/success?orderId=${orderResult.orderId}`);
+      
+      toast.success("Order placed successfully!");
+    } catch (error: any) {
       console.error("Error processing checkout:", error);
-      toast.error("Failed to process checkout. Please try again.");
-    } finally {
-      setIsProcessing(false);
+      toast.error(error?.data?.message || "Failed to process checkout. Please try again.");
     }
   };
 
-  if (status === "loading" || isLoading) {
+  if (status === "loading" || addressesLoading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -240,7 +234,7 @@ export default function CheckoutPage() {
                 <div className="text-center py-4">
                   <p className="mb-4">You don't have any saved addresses.</p>
                   <Link
-                    href={`/${domain}/dashboard/addresses/new?redirect=/checkout`}
+                    href={`/dashboard/addresses/new`}
                   >
                     <Button>Add New Address</Button>
                   </Link>
@@ -338,7 +332,7 @@ export default function CheckoutPage() {
                     placeholder="Enter code"
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
-                    disabled={!!discount || isApplyingDiscount}
+                    disabled={!!discount || isValidatingDiscount}
                   />
                   {discount ? (
                     <Button variant="outline" onClick={handleRemoveDiscount}>
@@ -348,9 +342,9 @@ export default function CheckoutPage() {
                   ) : (
                     <Button
                       onClick={handleApplyDiscount}
-                      disabled={isApplyingDiscount}
+                      disabled={isValidatingDiscount}
                     >
-                      {isApplyingDiscount ? (
+                      {isValidatingDiscount ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : null}
                       Apply
@@ -387,7 +381,7 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Discount</span>
                     <span>
-                      - Rs. {discount.discountAmount.toLocaleString()}
+                      - Rs. {discount?.discountAmount?.toLocaleString()}
                     </span>
                   </div>
                 )}
@@ -402,10 +396,10 @@ export default function CheckoutPage() {
                 className="w-full"
                 onClick={handleCheckout}
                 disabled={
-                  isProcessing || addresses.length === 0 || !paymentMethod
+                  isCreatingOrder || addresses.length === 0 || !paymentMethod
                 }
               >
-                {isProcessing ? (
+                {isCreatingOrder ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Processing...

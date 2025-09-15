@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useGetCategoriesQuery, useGetBrandsQuery } from "@/store/api/productsApi"
 
 export default function ProductFilters() {
   const router = useRouter()
@@ -15,33 +16,30 @@ export default function ProductFilters() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [onSale, setOnSale] = useState(false)
-  const [categories, setCategories] = useState([])
-  const [brands, setBrands] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchFilters = async () => {
-      setIsLoading(true)
-      try {
-        // Fetch categories
-        const categoriesResponse = await fetch("/api/categories")
-        const categoriesData = await categoriesResponse.json()
+  // RTK Query hooks for fetching categories and brands
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useGetCategoriesQuery({})
 
-        // Fetch brands
-        const brandsResponse = await fetch("/api/brands")
-        const brandsData = await brandsResponse.json()
+  const {
+    data: brandsData,
+    isLoading: brandsLoading,
+    error: brandsError,
+  } = useGetBrandsQuery()
 
-        setCategories(categoriesData.categories || [])
-        setBrands(brandsData.brands || [])
-      } catch (error) {
-        console.error("Error fetching filters:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  const categories = categoriesData?.categories || []
+  const brands = brandsData?.brands || []
+  const isLoading = categoriesLoading || brandsLoading
 
-    fetchFilters()
-  }, [])
+  if (categoriesError) {
+    console.error("Error fetching categories:", categoriesError)
+  }
+  if (brandsError) {
+    console.error("Error fetching brands:", brandsError)
+  }
 
   useEffect(() => {
     // Initialize filters from URL params

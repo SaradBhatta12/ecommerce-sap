@@ -4,6 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db-connect";
 import Order from "@/models/order";
 import User from "@/models/user";
+import Product from "@/models/product";
+import Discount from "@/models/discount";
 
 export async function POST(request: Request) {
   try {
@@ -43,11 +45,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Address not found" }, { status: 404 });
     }
 
+    // Validate stock availability before creating order
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+      if (!product) {
+        return NextResponse.json(
+          { error: `Product ${item.productId} not found` },
+          { status: 404 }
+        );
+      }
+      if (product.stock < item.quantity) {
+        return NextResponse.json(
+          { error: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create order
     const order = await Order.create({
       user: session.user.id,
       items: items?.map((item: any) => ({
-        product: item.id,
+        product: item.productId,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
@@ -73,6 +92,20 @@ export async function POST(request: Request) {
         : undefined,
       total,
     });
+
+    // Update product stock and discount usage
+    for (const item of items) {
+      await Product.findByIdAndUpdate(item.id, {
+        $inc: { stock: -item.quantity },
+      });
+    }
+
+    // If discount was applied, increment usage count
+    if (discount && discount.id) {
+      await Discount.findByIdAndUpdate(discount.id, {
+        $inc: { usageCount: 1 },
+      });
+    }
 
     return NextResponse.json(
       {

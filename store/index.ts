@@ -81,6 +81,8 @@ export {
   useAddToWishlistMutation,
   useRemoveFromWishlistMutation,
   useClearWishlistMutation,
+  useGetNotificationPreferencesQuery,
+  useUpdateNotificationPreferencesMutation,
 } from './api/userApi'
 
 export {

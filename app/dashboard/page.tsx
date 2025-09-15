@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import axios from "axios";
+import { useGetUserOrdersQuery, useGetWishlistQuery, useGetUserAddressesQuery } from "@/store";
 
 interface DashboardStats {
   totalOrders: number;
@@ -52,33 +52,37 @@ export default function DashboardPage() {
     recentOrders: [],
     recentWishlist: [],
   });
-  const [loading, setLoading] = useState(true);
+  // RTK Query hooks for data fetching
+  const {
+    data: ordersData,
+    isLoading: ordersLoading,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useGetUserOrdersQuery();
 
+  const {
+    data: wishlistData,
+    isLoading: wishlistLoading,
+    error: wishlistError,
+    refetch: refetchWishlist,
+  } = useGetWishlistQuery();
+
+  const {
+    data: addressesData,
+    isLoading: addressesLoading,
+    error: addressesError,
+    refetch: refetchAddresses,
+  } = useGetUserAddressesQuery();
+
+  const loading = ordersLoading || wishlistLoading || addressesLoading;
+
+  // Calculate stats from RTK Query data
   useEffect(() => {
-    if (status === "authenticated") {
-      fetchDashboardData();
-    } else if (status === "unauthenticated") {
-      setLoading(false);
-    }
-  }, [status]);
+    if (ordersData || wishlistData || addressesData) {
+      const orders = ordersData?.orders || [];
+      const wishlist = wishlistData?.wishlist || [];
+      const addresses = addressesData?.addresses || [];
 
-  const fetchDashboardData = async (showErrorToast = false) => {
-    try {
-      setLoading(true);
-      
-      // Fetch all data concurrently for better performance
-      const [ordersRes, wishlistRes, addressesRes] = await Promise.allSettled([
-        axios.get("/api/user/orders"),
-        axios.get("/api/user/wishlist"),
-        axios.get("/api/user/addresses")
-      ]);
-
-      // Extract data with fallbacks
-      const orders = ordersRes.status === 'fulfilled' ? ordersRes.value.data.orders || [] : [];
-      const wishlist = wishlistRes.status === 'fulfilled' ? wishlistRes.value.data.wishlist || [] : [];
-      const addresses = addressesRes.status === 'fulfilled' ? addressesRes.value.data.addresses || [] : [];
-
-      // Calculate stats
       const totalSpent = orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
       const recentOrders = orders.slice(0, 5);
       const recentWishlist = wishlist.slice(0, 3);
@@ -92,20 +96,20 @@ export default function DashboardPage() {
         recentOrders,
         recentWishlist,
       });
-
-      // Only show error toast if explicitly requested (manual refresh)
-      const hasErrors = [ordersRes, wishlistRes, addressesRes].some(res => res.status === 'rejected');
-      if (hasErrors && showErrorToast) {
-        toast.error("Some data could not be loaded. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      if (showErrorToast) {
-        toast.error("Failed to load dashboard data");
-      }
-    } finally {
-      setLoading(false);
     }
+  }, [ordersData, wishlistData, addressesData]);
+
+  // Handle errors
+  useEffect(() => {
+    if (ordersError || wishlistError || addressesError) {
+      toast.error("Some data could not be loaded. Please try again.");
+    }
+  }, [ordersError, wishlistError, addressesError]);
+
+  const handleRefresh = () => {
+    refetchOrders();
+    refetchWishlist();
+    refetchAddresses();
   };
 
   if (status === "loading" || loading) {
@@ -127,7 +131,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => fetchDashboardData(true)} disabled={loading}>
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
