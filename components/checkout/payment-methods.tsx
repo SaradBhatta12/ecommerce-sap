@@ -5,70 +5,74 @@ import Image from "next/image";
 import { CreditCard } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { initiateEsewaPayment } from "@/lib/payment/esewa";
 import { initiateKhaltiPayment } from "@/lib/payment/khalti";
 import { toast } from "sonner";
 
 interface PaymentMethodsProps {
-  orderId: string;
+  selectedMethod: string;
   amount: number;
   onPaymentMethodChange: (method: string) => void;
   onPaymentComplete: (transactionId: string) => void;
+  onOrderDataReady?: () => void;
 }
 
 export default function PaymentMethods({
-  orderId,
+  selectedMethod,
   amount,
   onPaymentMethodChange,
   onPaymentComplete,
+  onOrderDataReady,
 }: PaymentMethodsProps) {
-  const [paymentMethod, setPaymentMethod] = useState("esewa");
-
-
   const handlePaymentMethodChange = (value: string) => {
-    setPaymentMethod(value);
     onPaymentMethodChange(value);
   };
 
   const handleEsewaPayment = () => {
     const baseUrl = window.location.origin;
+    const orderId = `ORDER_${Date.now()}`;
 
     initiateEsewaPayment({
       amount,
       productId: orderId,
-      productName: `Order #${orderId}`,
-      successUrl: `${baseUrl}/api/payment/esewa/success?order_id=${orderId}`,
-      failureUrl: `${baseUrl}/api/payment/esewa/failure?order_id=${orderId}`,
+      productName: `Order Payment`,
+      successUrl: `${baseUrl}/api/payment/esewa/success`,
+      failureUrl: `${baseUrl}/api/payment/esewa/failure`,
     });
   };
 
   const handleKhaltiPayment = () => {
     const baseUrl = window.location.origin;
+    const orderId = `ORDER_${Date.now()}`;
 
     initiateKhaltiPayment({
       amount,
       productId: orderId,
-      productName: `Order #${orderId}`,
-      successUrl: `${baseUrl}/api/payment/khalti/success?order_id=${orderId}`,
-      failureUrl: `${baseUrl}/api/payment/khalti/failure?order_id=${orderId}`,
+      productName: `Order Payment`,
+      successUrl: `${baseUrl}/api/payment/khalti/success`,
+      failureUrl: `${baseUrl}/api/payment/khalti/failure`,
     });
   };
 
   const handlePayNow = () => {
-    if (paymentMethod === "esewa") {
+    // First trigger the order data preparation
+    if (onOrderDataReady) {
+      onOrderDataReady();
+    }
+
+    // Then initiate the payment
+    if (selectedMethod === "esewa") {
       handleEsewaPayment();
-    } else if (paymentMethod === "khalti") {
+    } else if (selectedMethod === "khalti") {
       handleKhaltiPayment();
-    } else {
-      // For COD, just complete the order
-      onPaymentComplete("cod_payment");
     }
   };
 
   return (
     <div className="space-y-4">
       <RadioGroup
-        value={paymentMethod}
+        value={selectedMethod}
         onValueChange={handlePaymentMethodChange}
         className="space-y-3"
       >
@@ -108,25 +112,35 @@ export default function PaymentMethods({
       </RadioGroup>
 
       <div className="mt-4 text-sm text-muted-foreground">
-        {paymentMethod === "esewa" && (
+        {selectedMethod === "esewa" && (
           <p>
             Pay securely using your Esewa account. You will be redirected to
             Esewa to complete the payment.
           </p>
         )}
-        {paymentMethod === "khalti" && (
+        {selectedMethod === "khalti" && (
           <p>
             Pay securely using your Khalti account. You will be redirected to
             Khalti to complete the payment.
           </p>
         )}
-        {paymentMethod === "cod" && (
+        {selectedMethod === "cod" && (
           <p>
             Pay with cash upon delivery. Please have the exact amount ready for
             our delivery person.
           </p>
         )}
       </div>
+
+      {(selectedMethod === "esewa" || selectedMethod === "khalti") && (
+        <Button 
+          onClick={handlePayNow} 
+          className="w-full mt-4"
+          size="lg"
+        >
+          Pay Now - Rs. {amount.toLocaleString()}
+        </Button>
+      )}
     </div>
   );
 }

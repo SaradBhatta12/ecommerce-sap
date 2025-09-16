@@ -153,6 +153,7 @@ export function EnhancedProductForm({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic"); // Add state for tracking active tab
 
   // RTK Query mutations
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
@@ -181,6 +182,13 @@ export function EnhancedProductForm({
       recycledMaterials: false,
     },
   });
+
+  // Check if variants exist and are properly configured
+  const variants = form.watch("variant") || [];
+  const hasVariants = variants.length > 0;
+  
+  // Check if create button should be disabled
+  const shouldDisableCreateButton = hasVariants && activeTab !== "advanced" && !initialData;
 
   // Set mounted state after component mounts and theme is available
   useEffect(() => {
@@ -341,7 +349,7 @@ export function EnhancedProductForm({
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Tabs defaultValue="basic" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="variants">Variants</TabsTrigger>
@@ -880,7 +888,7 @@ export function EnhancedProductForm({
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || shouldDisableCreateButton}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               {loading ? (

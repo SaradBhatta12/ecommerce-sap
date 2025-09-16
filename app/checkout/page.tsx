@@ -162,14 +162,60 @@ export default function CheckoutPage() {
     }
 
     try {
-      // Create order
-      const orderResult = await createOrder({
+      // For COD, create order directly
+      if (paymentMethod === "cod") {
+        const orderResult = await createOrder({
+          addressId: selectedAddress,
+          paymentMethod,
+          items: cartItems.map((item) => ({
+            productId: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            image: item.image
+          })),
+          subtotal,
+          shipping,
+          discount: discount
+            ? {
+              id: discount._id,
+              code: discount.code,
+              amount: discount.discountAmount,
+            }
+            : null,
+          total,
+        }).unwrap();
+
+        // Apply discount if used
+        if (discount) {
+          try {
+            await applyDiscount({
+              discountId: discount._id,
+            }).unwrap();
+          } catch (discountError) {
+            console.warn("Failed to apply discount usage:", discountError);
+          }
+        }
+
+        // Clear cart
+        dispatch(clearCart());
+
+        // Redirect to success page
+        router.push(`/checkout/success?orderId=${orderResult.orderId}`);
+        toast.success("Order placed successfully!");
+        return;
+      }
+
+      // For online payments (eSewa, Khalti), store order data in sessionStorage first
+      const orderData = {
         addressId: selectedAddress,
         paymentMethod,
         items: cartItems.map((item) => ({
           productId: item.id,
+          name: item.name,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
+          image: item.image
         })),
         subtotal,
         shipping,
@@ -181,27 +227,29 @@ export default function CheckoutPage() {
           }
           : null,
         total,
-      }).unwrap();
+      };
 
-      // Apply discount if used
-      if (discount) {
-        try {
-          await applyDiscount({
-            discountId: discount._id,
-          }).unwrap();
-        } catch (discountError) {
-          console.warn("Failed to apply discount usage:", discountError);
-          // Don't fail the entire checkout for discount application issues
-        }
-      }
-
-      // Clear cart
-      dispatch(clearCart());
-
-      // Redirect to success page
-      router.push(`/${domain}/checkout/success?orderId=${orderResult.orderId}`);
+      // Store order data for payment completion
+      sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
       
-      toast.success("Order placed successfully!");
+      // Show success message and redirect to payment
+      toast.success("Order prepared! Redirecting to payment gateway...");
+      
+      // Trigger payment initiation based on selected method
+      if (paymentMethod === 'esewa') {
+        const { initiateEsewaPayment } = await import('@/lib/payment/esewa');
+        await initiateEsewaPayment({
+          amount: total,
+          orderData: orderData
+        });
+      } else if (paymentMethod === 'khalti') {
+        const { initiateKhaltiPayment } = await import('@/lib/payment/khalti');
+        await initiateKhaltiPayment({
+          amount: total,
+          orderData: orderData
+        });
+      }
+      
     } catch (error: any) {
       console.error("Error processing checkout:", error);
       toast.error(error?.data?.message || "Failed to process checkout. Please try again.");
@@ -271,7 +319,7 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                   <Link
-                    href={`/${domain}/dashboard/addresses/new?redirect=/checkout`}
+                    href={`/dashboard/addresses/new`}
                   >
                     <Button variant="outline" className="w-full">
                       Add New Address
@@ -294,6 +342,8 @@ export default function CheckoutPage() {
                 onPaymentComplete={(transactionId) => {
                   // Handle payment completion
                 }}
+                amount={total}
+                onOrderDataReady={() => handleCheckout()}
               />
             </CardContent>
           </Card>

@@ -94,6 +94,7 @@ export default function ProductCard({
       toast.error("Error", {
         description: "Failed to update wishlist. Please try again.",
       });
+    }
   };
 
   // Calculate discount price from applicable discounts
@@ -195,6 +196,4 @@ export default function ProductCard({
       </div>
     </div>
   );
-}
-
 }

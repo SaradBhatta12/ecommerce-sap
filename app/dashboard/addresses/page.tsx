@@ -19,7 +19,7 @@ type Address = {
   _id: string;
   fullName: string;
   address: string;
-  city: string;
+  district: string;
   province: string;
   postalCode?: string;
   phone: string;
@@ -48,7 +48,7 @@ async function getAddresses(): Promise<Address[]> {
       _id: address._id.toString(),
       fullName: address.fullName,
       address: address.address,
-      city: address.city,
+      district: address.district,
       province: address.province,
       postalCode: address.postalCode || undefined,
       phone: address.phone,

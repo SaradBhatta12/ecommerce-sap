@@ -13,13 +13,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getOrDerById } from "@/_actions/_orders";
+import { Order, OrderItem, OrderTimeline } from "@/types";
 
 export default async function OrderDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
-  let order;
+  let order: Order | null = null;
   console.log(params.id);
 
   try {
@@ -114,9 +115,9 @@ export default async function OrderDetailPage({
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
-                {order?.items?.map((item: any) => (
+                {order?.items?.map((item: OrderItem) => (
                   <div
-                    key={item.id}
+                    key={item.product._id || item.name}
                     className="flex items-center justify-between"
                   >
                     <div className="flex items-center space-x-2">
@@ -173,29 +174,34 @@ export default async function OrderDetailPage({
         </CardHeader>
         <CardContent>
           <div className="relative space-y-4 border-l pl-6 pt-2">
-            {order?.timeline?.map((event: any, index: any) => (
+            {order?.timeline?.map((event: OrderTimeline, index: number) => (
               <div key={index} className="relative pb-4">
                 <div className="absolute -left-[25px] flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                   {event?.status === "Order Placed" && (
                     <Package className="h-3 w-3" />
                   )}
-                  {event?.status === "Payment Confirmed" && (
-                    <CheckCircle className="h-3 w-3" />
-                  )}
                   {event?.status === "Processing" && (
                     <Package className="h-3 w-3" />
                   )}
-                  {event?.status === "Shipped" && <Truck className="h-3 w-3" />}
+                  {event?.status === "Shipped" && (
+                    <Truck className="h-3 w-3" />
+                  )}
                   {event?.status === "Delivered" && (
                     <CheckCircle className="h-3 w-3" />
                   )}
                 </div>
-                <div className="flex flex-col space-y-1">
-                  <div className="text-sm font-medium">{event?.status}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(event?.date).toLocaleString()}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{event?.status}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(event?.date).toLocaleDateString()}
+                    </p>
                   </div>
-                  <div className="text-sm">{event?.description}</div>
+                  {event?.description && (
+                    <p className="text-xs text-muted-foreground">
+                      {event.description}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db-connect";
 import Location from "@/models/locations";
+import mongoose from "mongoose";
 
 // GET /api/locations - Get locations with optional filtering
 export async function GET(request: NextRequest) {
@@ -21,7 +22,13 @@ export async function GET(request: NextRequest) {
 
     // Filter by parent if provided
     if (parent) {
-      query.parent = parent;
+      // Check if parent is a valid ObjectId string
+      if (mongoose.Types.ObjectId.isValid(parent)) {
+        query.parent = new mongoose.Types.ObjectId(parent);
+      } else {
+        // If parent is not a valid ObjectId, return empty results
+        return NextResponse.json({ locations: [] }, { status: 200 });
+      }
     } else if (parent === 'null' || parent === '') {
       query.parent = null;
     }

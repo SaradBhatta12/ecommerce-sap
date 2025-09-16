@@ -28,18 +28,26 @@ export interface IUser extends Document {
   emailVerified?: Date;
   phone?: string;
   addresses: Array<{
+    _id?: string;
     fullName: string;
     address: string;
-    city: string;
+    district: string;
     province: string;
+    locality?: string;
     postalCode?: string;
     phone: string;
+    alternatePhone?: string;
     landmark?: string;
+    addressType: "home" | "office" | "other";
     coordinates?: {
       lat: number;
       lng: number;
     };
     isDefault: boolean;
+    isActive: boolean;
+    deliveryInstructions?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
   }>;
   notificationPreferences?: {
     email: boolean;
@@ -82,18 +90,102 @@ export interface IUser extends Document {
 }
 
 const addressSchema = new Schema({
-  fullName: { type: String, required: true },
-  address: { type: String, required: true },
-  city: { type: String, required: true },
-  province: { type: String, required: true },
-  postalCode: { type: String },
-  phone: { type: String, required: true },
-  landmark: { type: String },
-  coordinates: {
-    lat: { type: Number },
-    lng: { type: Number },
+  fullName: { 
+    type: String, 
+    required: [true, 'Full name is required'],
+    trim: true,
+    minlength: [2, 'Full name must be at least 2 characters'],
+    maxlength: [100, 'Full name cannot exceed 100 characters']
   },
-  isDefault: { type: Boolean, default: false },
+  address: { 
+    type: String,
+    trim: true,
+    maxlength: [500, 'Address cannot exceed 500 characters']
+  },
+  district: { 
+    type: String,
+    trim: true,
+    maxlength: [100, 'District name cannot exceed 100 characters']
+  },
+  province: { 
+    type: String,
+    trim: true,
+    maxlength: [100, 'Province name cannot exceed 100 characters']
+  },
+  locality: { 
+    type: String,
+    trim: true,
+    maxlength: [100, 'Locality name cannot exceed 100 characters']
+  },
+  postalCode: { 
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v: string) {
+        return !v || /^\d{5}$/.test(v);
+      },
+      message: 'Postal code must be 5 digits'
+    }
+  },
+  phone: { 
+    type: String,
+    required: [true, 'Phone number is required'],
+    validate: {
+      validator: function(v: string) {
+        return /^(9[678]\d{8})$/.test(v);
+      },
+      message: 'Please enter a valid Nepali phone number (98xxxxxxxx)'
+    }
+  },
+  alternatePhone: { 
+    type: String,
+    validate: {
+      validator: function(v: string) {
+        return !v || /^(9[678]\d{8})$/.test(v);
+      },
+      message: 'Please enter a valid Nepali phone number (98xxxxxxxx)'
+    }
+  },
+  landmark: { 
+    type: String,
+    trim: true,
+    maxlength: [200, 'Landmark cannot exceed 200 characters']
+  },
+  addressType: {
+    type: String,
+    enum: {
+      values: ['home', 'office', 'other'],
+      message: 'Address type must be home, office, or other'
+    },
+    default: 'home'
+  },
+  coordinates: {
+    lat: { 
+      type: Number,
+      min: [-90, 'Latitude must be between -90 and 90'],
+      max: [90, 'Latitude must be between -90 and 90']
+    },
+    lng: { 
+      type: Number,
+      min: [-180, 'Longitude must be between -180 and 180'],
+      max: [180, 'Longitude must be between -180 and 180']
+    },
+  },
+  isDefault: { 
+    type: Boolean, 
+    default: false 
+  },
+  isActive: { 
+    type: Boolean, 
+    default: true 
+  },
+  deliveryInstructions: { 
+    type: String,
+    trim: true,
+    maxlength: [300, 'Delivery instructions cannot exceed 300 characters']
+  }
+}, {
+  timestamps: true
 });
 
 const vendorProfileSchema = new Schema({

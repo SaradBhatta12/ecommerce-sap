@@ -42,7 +42,7 @@ interface AddressCardProps {
     _id: string;
     fullName: string;
     address: string;
-    city: string;
+    district: string;
     province: string;
     postalCode?: string;
     phone: string;
@@ -186,7 +186,7 @@ export function AddressCard({ address }: AddressCardProps) {
               <div>
                 <p>{address.address}</p>
                 <p>
-                  {address.city}, {address.province}{address.postalCode ? ` ${address.postalCode}` : ''}
+                  {address.district}, {address.province}{address.postalCode ? ` ${address.postalCode}` : ''}
                 </p>
               </div>
             </div>
@@ -223,6 +223,8 @@ export function AddressCard({ address }: AddressCardProps) {
             </Link>
           </Button>
           {!address.isDefault && (
+
+            
             <Button
               variant="default"
               onClick={handleSetDefault}
@@ -276,7 +278,7 @@ export function AddressCard({ address }: AddressCardProps) {
               <p className="font-medium">{address.fullName}</p>
               <p>{address.address}</p>
               <p>
-                {address.city}, {address.province}{address.postalCode ? ` ${address.postalCode}` : ''}
+                {address.district}, {address.province}{address.postalCode ? ` ${address.postalCode}` : ''}
               </p>
             </div>
           </DialogContent>

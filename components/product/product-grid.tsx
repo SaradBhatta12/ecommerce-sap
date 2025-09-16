@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import ProductCard from "@/components/product/product-card";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-// Store functionality removed
+import { useGetProductsQuery } from "@/store";
 
 interface Product {
   _id: string;
@@ -26,60 +26,51 @@ interface Product {
 export default function ProductGrid() {
   const domain = "default"; // Multi-tenant functionality removed
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 9,
-    pages: 1,
-  });
-  const [isLoading, setIsLoading] = useState(true);
   const [visibleProducts, setVisibleProducts] = useState(9);
 
+  // Build query parameters from search params
+  const queryParams = useMemo(() => {
+    const params: any = {};
+    
+    // Add all existing search params
+    for (const [key, value] of searchParams.entries()) {
+      params[key] = value;
+    }
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      try {
-        // Build query string from search params
-        const queryParams = new URLSearchParams();
+    // Set default limit if not provided
+    if (!params.limit) {
+      params.limit = 20;
+    }
 
-        // Add all existing search params
-        for (const [key, value] of searchParams.entries()) {
-          queryParams.append(key, value);
-        }
+    // Append domain
+    params.domain = domain;
 
-        // Set default limit if not provided
-        if (!queryParams.has("limit")) {
-          queryParams.set("limit", "20");
-        }
+    return params;
+  }, [searchParams, domain]);
 
-        // Append domain
-        queryParams.set("domain", domain); // ✅ safe and correct way
+  // Use RTK Query hook to fetch products
+  const {
+    data: productsData,
+    error,
+    isLoading,
+    isError
+  } = useGetProductsQuery(queryParams);
 
-        // ✅ Final fetch URL
-        const response = await fetch(`/api/products?${queryParams.toString()}`);
-        if (!response.ok) throw new Error("Failed to fetch products");
+  // Handle error state
+  if (isError) {
+    console.error("Error fetching products:", error);
+    toast.error("Error", {
+      description: "Failed to load products. Please try again.",
+    });
+  }
 
-        const data = await response.json();
-
-        setProducts(data.products || []);
-        setPagination(
-          data.pagination || { total: 0, page: 1, limit: 9, pages: 1 }
-        );
-        setVisibleProducts(9);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        toast.error("Error", {
-          description: "Failed to load products. Please try again.",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [searchParams, toast]);
+  const products = productsData?.products || [];
+  const pagination = {
+    total: productsData?.totalProducts || 0,
+    page: productsData?.currentPage || 1,
+    limit: queryParams.limit || 20,
+    pages: productsData?.totalPages || 1,
+  };
 
   const loadMore = () => {
     setVisibleProducts((prev) => Math.min(prev + 6, products.length));

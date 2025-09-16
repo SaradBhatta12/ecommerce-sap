@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       address: {
         fullName: address.fullName,
         address: address.address,
-        city: address.city,
+        city: address.district, // Map district to city
         province: address.province,
         postalCode: address.postalCode,
         phone: address.phone,
