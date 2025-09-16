@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   ChevronLeft,
   ChevronRight,
@@ -79,7 +79,7 @@ interface Product {
 export default function ProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
+
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -108,11 +108,7 @@ export default function ProductsPage() {
   // Handle RTK Query errors
   useEffect(() => {
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch products",
-        variant: "destructive",
-      });
+      toast.error("Failed to fetch products");
     }
   }, [error, toast]);
 
@@ -175,19 +171,12 @@ export default function ProductsPage() {
     try {
       await deleteProduct(id).unwrap();
       
-      toast({
-        title: "Success",
-        description: "Product deleted successfully",
-      });
+      toast.success("Product deleted successfully");
 
       // RTK Query will automatically refetch the data due to cache invalidation
     } catch (error: any) {
       console.error("Error deleting product:", error);
-      toast({
-        title: "Error",
-        description: error?.data?.error || "Failed to delete product",
-        variant: "destructive",
-      });
+      toast.error(error?.data?.error || "Failed to delete product");
     }
   };
 

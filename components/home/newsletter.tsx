@@ -5,12 +5,12 @@ import type React from "react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export default function Newsletter() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +21,7 @@ export default function Newsletter() {
     setTimeout(() => {
       setIsLoading(false);
       setEmail("");
-      toast({
-        title: "Subscription successful!",
+      toast.success("Subscription successful!", {
         description: "Thank you for subscribing to our newsletter.",
       });
     }, 1000);

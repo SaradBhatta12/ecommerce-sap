@@ -8,7 +8,7 @@ import { Heart, ShoppingCart, Eye, Check } from "lucide-react"
 import { HolographicCard } from "@/components/ui/holographic-card"
 import { Button } from "@/components/ui/button"
 import { addToWishlist, removeFromWishlist } from "@/lib/api-endpoints"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 // Store functionality removed
 
 interface FuturisticProductCardProps {
@@ -20,7 +20,7 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
   const [isWishlisted, setIsWishlisted] = useState(inWishlist)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [showQuickView, setShowQuickView] = useState(false)
-  const { toast } = useToast()
+
   // Store functionality removed
 
   const handleWishlistToggle = async () => {
@@ -28,23 +28,19 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
       if (isWishlisted) {
         await removeFromWishlist(product._id)
         setIsWishlisted(false)
-        toast({
-          title: "Removed from wishlist",
+        toast.success("Removed from wishlist", {
           description: `${product.name} has been removed from your wishlist`,
         })
       } else {
         await addToWishlist(product._id)
         setIsWishlisted(true)
-        toast({
-          title: "Added to wishlist",
+        toast.success("Added to wishlist", {
           description: `${product.name} has been added to your wishlist`,
         })
       }
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to update wishlist",
-        variant: "destructive",
       })
     }
   }
@@ -56,10 +52,8 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
     setTimeout(() => {
       setIsAddingToCart(false)
 
-      toast({
-        title: "Cart functionality removed",
+      toast.error("Cart functionality removed", {
         description: "Cart functionality has been temporarily removed.",
-        variant: "destructive",
       })
     }, 600)
   }

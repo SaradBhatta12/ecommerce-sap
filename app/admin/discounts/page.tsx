@@ -31,7 +31,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,7 +68,7 @@ export default function DiscountsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState<string | null>(null);
   const router = useRouter();
-  const { toast } = useToast();
+
 
   useEffect(() => {
     fetchDiscounts();
@@ -83,11 +83,7 @@ export default function DiscountsPage() {
       setDiscounts(data);
     } catch (error) {
       console.error("Error fetching discounts:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load discounts. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to load discounts. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -115,19 +111,12 @@ export default function DiscountsPage() {
         )
       );
 
-      toast({
-        title: "Success",
-        description: `Discount ${
-          currentStatus ? "deactivated" : "activated"
-        } successfully`,
-      });
+      toast.success(
+        `Discount ${currentStatus ? "deactivated" : "activated"} successfully`
+      );
     } catch (error) {
       console.error("Error toggling discount status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update discount status",
-        variant: "destructive",
-      });
+      toast.error("Failed to update discount status");
     } finally {
       setIsTogglingStatus(null);
     }
@@ -147,17 +136,10 @@ export default function DiscountsPage() {
 
       setDiscounts(discounts.filter((discount) => discount._id !== deleteId));
 
-      toast({
-        title: "Success",
-        description: "Discount deleted successfully",
-      });
+      toast.success("Discount deleted successfully");
     } catch (error) {
       console.error("Error deleting discount:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete discount",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete discount");
     } finally {
       setIsDeleting(false);
       setDeleteId(null);

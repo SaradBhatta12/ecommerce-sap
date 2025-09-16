@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, MapPin, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -38,7 +38,7 @@ export default function LocationPicker({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const { toast } = useToast();
+
 
   // Initialize map
   useEffect(() => {
@@ -100,10 +100,8 @@ export default function LocationPicker({
       const data = await response.json();
 
       if (data.features.length === 0) {
-        toast({
-          title: "No results found",
+        toast.warning("No results found", {
           description: "Try a different search term or drop a pin on the map",
-          variant: "destructive",
         });
         return;
       }
@@ -116,16 +114,13 @@ export default function LocationPicker({
       marker.current!.setLngLat([lng, lat]);
       setLocation({ lat, lng });
 
-      toast({
-        title: "Location found",
+      toast.success("Location found", {
         description: data.features[0].place_name,
       });
     } catch (error) {
       console.error("Error searching location:", error);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to search location. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setIsSearching(false);

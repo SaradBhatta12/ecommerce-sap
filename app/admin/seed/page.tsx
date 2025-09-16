@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
 export default function SeedPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string; data?: any } | null>(null)
   const router = useRouter()
-  const { toast } = useToast()
+
 
   const handleSeed = async () => {
     if (
@@ -40,8 +40,7 @@ export default function SeedPage() {
         data,
       })
 
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Sample data has been created successfully.",
       })
 
@@ -53,10 +52,8 @@ export default function SeedPage() {
         message: error instanceof Error ? error.message : "An unknown error occurred",
       })
 
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to seed data",
-        variant: "destructive",
       })
     } finally {
       setIsLoading(false)

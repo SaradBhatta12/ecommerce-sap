@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -29,7 +29,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     title: "",
     content: "",
   })
-  const { toast } = useToast()
+
   const { data: session } = useSession()
 
   useEffect(() => {
@@ -60,10 +60,8 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     e.preventDefault()
 
     if (!session) {
-      toast({
-        title: "Please sign in",
+      toast.warning("Please sign in", {
         description: "You need to be signed in to leave a review.",
-        variant: "destructive",
       })
       return
     }
@@ -86,8 +84,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
       // Add the new review to the list
       setReviews([data.review, ...reviews])
 
-      toast({
-        title: "Review submitted",
+      toast.success("Review submitted", {
         description: "Thank you for your review!",
       })
 
@@ -98,18 +95,15 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         content: "",
       })
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to submit review",
-        variant: "destructive",
       })
     }
   }
 
   const handleHelpful = async (reviewId: string, isHelpful: boolean) => {
     if (!session) {
-      toast({
-        title: "Please sign in",
+      toast.warning("Please sign in", {
         description: "You need to be signed in to vote on reviews.",
       })
       return
@@ -142,15 +136,12 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         }),
       )
 
-      toast({
-        title: "Feedback recorded",
+      toast.success("Feedback recorded", {
         description: "Thank you for your feedback on this review.",
       })
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to vote on review",
-        variant: "destructive",
       })
     }
   }

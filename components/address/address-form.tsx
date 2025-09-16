@@ -21,14 +21,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Loader2, Navigation } from "lucide-react";
 import LocationPicker from "./location-picker";
-import {
-  nepalProvinces,
-  districtsByProvince,
-  localitiesByDistrict,
-} from "@/lib/nepal-data";
+import ImprovedAddressPicker from './improved-address-picker';
+
+import { useGetLocationTreeQuery, useGetLocationsByParentQuery } from '@/store/api/locationApi';
 
 interface AddressFormProps {
   initialData?: {
@@ -50,52 +48,54 @@ interface AddressFormProps {
 
 export default function AddressForm({ initialData }: AddressFormProps) {
   const router = useRouter();
-  const { toast } = useToast();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState<string>(
-    initialData?.province
-      ? nepalProvinces.find((p) => p.name === initialData.province)?.id || ""
-      : ""
+    initialData?.province || ""
   );
-  const [districts, setDistricts] = useState<string[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState<string>(
     initialData?.city || ""
   );
-  const [localities, setLocalities] = useState<string[]>([]);
   const [selectedLocality, setSelectedLocality] = useState<string>(
     initialData?.locality || ""
   );
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: initialData?.fullName || "",
     city: initialData?.city || "",
+    district: initialData?.city || "",
     province: initialData?.province || "",
     postalCode: initialData?.postalCode || "",
     phone: initialData?.phone || "",
     landmark: initialData?.landmark || "",
     locality: initialData?.locality || "",
-    coordinates: initialData?.coordinates || { lat: 27.7172, lng: 85.324 },
+    coordinates: initialData?.coordinates || { lat: 0, lng: 0 },
     isDefault: initialData?.isDefault || false,
   });
 
-  useEffect(() => {
-    if (selectedProvince)
-      setDistricts(districtsByProvince[selectedProvince] || []);
-    else setDistricts([]);
-  }, [selectedProvince]);
+  // Fetch location data from API
+  const { data: locationTree, isLoading: isLoadingTree } = useGetLocationTreeQuery();
+  const { data: apiProvinces, isLoading: isLoadingProvinces } = useGetLocationsByParentQuery(null);
+  const { data: apiDistricts, isLoading: isLoadingDistricts } = useGetLocationsByParentQuery(
+    formData.province || null,
+    { skip: !formData.province }
+  );
+  const { data: apiLocalities, isLoading: isLoadingLocalities } = useGetLocationsByParentQuery(
+    formData.district || null,
+    { skip: !formData.district }
+  );
 
-  useEffect(() => {
-    if (selectedDistrict)
-      setLocalities(localitiesByDistrict[selectedDistrict] || []);
-    else setLocalities([]);
-  }, [selectedDistrict]);
+
 
   const handleProvinceChange = (value: string) => {
     setSelectedProvince(value);
     setFormData((prev) => ({
       ...prev,
-      province: nepalProvinces.find((p) => p.id === value)?.name || "",
+      province: value,
+      district: '',
+      locality: ''
     }));
     setSelectedDistrict("");
     setSelectedLocality("");
@@ -103,7 +103,13 @@ export default function AddressForm({ initialData }: AddressFormProps) {
 
   const handleDistrictChange = (value: string) => {
     setSelectedDistrict(value);
-    setFormData((prev) => ({ ...prev, city: value }));
+    setFormData((prev) => ({
+      ...prev,
+      city: value,
+      district: value,
+      locality: ''
+    }));
+    setSelectedLocality("");
   };
 
   const handleLocalityChange = (value: string) => {
@@ -132,18 +138,14 @@ export default function AddressForm({ initialData }: AddressFormProps) {
 
     const phoneRegex = /^(9[678]\d{8})$/;
     if (!phoneRegex.test(formData.phone)) {
-      return toast({
-        title: "Invalid Phone Number",
+      return toast.error("Invalid Phone Number", {
         description: "Enter valid Nepali number",
-        variant: "destructive",
       });
     }
 
     if (formData.postalCode && !/^\d{5}$/.test(formData.postalCode)) {
-      return toast({
-        title: "Invalid Postal Code",
+      return toast.error("Invalid Postal Code", {
         description: "Postal code must be 5 digits",
-        variant: "destructive",
       });
     }
 
@@ -165,25 +167,20 @@ export default function AddressForm({ initialData }: AddressFormProps) {
       const result = await response.json();
 
       if (!response.ok) {
-        return toast({
-          title: "Error",
+        return toast.error("Error", {
           description: result.error || "Failed to save address",
-          variant: "destructive",
         });
       }
 
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: initialData ? "Address updated" : "Address added",
       });
       router.push(`/dashboard/addresses`);
       router.refresh();
     } catch (error: any) {
       console.error(error);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Something went wrong",
-        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -226,61 +223,39 @@ export default function AddressForm({ initialData }: AddressFormProps) {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="province">Province</Label>
-              <Select
-                value={selectedProvince}
-                onValueChange={handleProvinceChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select province" />
-                </SelectTrigger>
-                <SelectContent>
-                  {nepalProvinces.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">District</Label>
-              <Select
-                value={selectedDistrict}
-                onValueChange={handleDistrictChange}
-                disabled={!selectedProvince}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select district" />
-                </SelectTrigger>
-                <SelectContent>
-                  {districts.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="locality">Locality</Label>
-              <Select
-                value={selectedLocality}
-                onValueChange={handleLocalityChange}
-                disabled={!selectedDistrict}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select locality" />
-                </SelectTrigger>
-                <SelectContent>
-                  {localities.map((l) => (
-                    <SelectItem key={l} value={l}>
-                      {l}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddressPicker(true)}
+                  className="w-full justify-start h-auto p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <Navigation className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <div className="text-left">
+                      {formData.province || formData.district || formData.locality ? (
+                        <div>
+                          <div className="font-medium">
+                            {[formData.locality, formData.district, formData.province].filter(Boolean).join(', ')}
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            Click to change location
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="font-medium">Select Location</div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            Choose your province, district, and locality
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Button>
+              </div>
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="landmark">Landmark</Label>

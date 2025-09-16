@@ -7,7 +7,7 @@ import { Heart, Minus, Plus, Share2, ShoppingCart, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { useGetWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store"
 
 interface ProductDetailsProps {
@@ -20,7 +20,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const params = useParams()
   const domain = params.domain as string
   // Store functionality removed
-  const { toast } = useToast()
+
   const [quantity, setQuantity] = useState(1)
   // RTK Query hooks for wishlist operations
   const { data: wishlistData } = useGetWishlistQuery()
@@ -33,17 +33,14 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
   const handleAddToCart = () => {
     // Cart functionality removed
-    toast({
-      title: "Cart functionality removed",
+    toast.error("Cart functionality removed", {
       description: "Cart functionality has been temporarily removed.",
-      variant: "destructive",
     })
   }
 
   const handleToggleWishlist = async () => {
     if (!session) {
-      toast({
-        title: "Authentication Required",
+      toast.warning("Authentication Required", {
         description: "Please sign in to add items to your wishlist",
       })
       router.push(`/s/${domain}/auth?tab=login&callbackUrl=/s/${domain}/product/detail/${product._id}`)
@@ -54,24 +51,20 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
       if (isInWishlist) {
         // Remove from wishlist
         await removeFromWishlist({ productId: product._id }).unwrap()
-        toast({
-          title: "Removed from wishlist",
+        toast.success("Removed from wishlist", {
           description: `${product.name} has been removed from your wishlist.`,
         })
       } else {
         // Add to wishlist
         await addToWishlist({ productId: product._id }).unwrap()
-        toast({
-          title: "Added to wishlist",
+        toast.success("Added to wishlist", {
           description: `${product.name} has been added to your wishlist.`,
         })
       }
     } catch (error) {
       console.error("Error updating wishlist:", error)
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to update wishlist. Please try again.",
-        variant: "destructive",
       })
     }
   }
@@ -80,10 +73,8 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     if (quantity < product.stock) {
       setQuantity(quantity + 1)
     } else {
-      toast({
-        title: "Maximum quantity reached",
+      toast.warning("Maximum quantity reached", {
         description: `Only ${product.stock} items available in stock.`,
-        variant: "destructive",
       })
     }
   }

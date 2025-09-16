@@ -9,27 +9,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession, signOut } from "next-auth/react";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { useTheme } from "next-themes";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export function DashboardHeader() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
+
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
-    toast({
-      title: `Theme Changed`,
+    toast.success(`Theme Changed`, {
       description: `Switched to ${newTheme} mode`,
     });
   };
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
-    toast({
-      title: "Signed Out",
+    toast.success("Signed Out", {
       description: "You have been signed out successfully",
     });
   };

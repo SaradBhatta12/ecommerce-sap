@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle,
@@ -57,7 +57,7 @@ interface AddressCardProps {
 
 export function AddressCard({ address }: AddressCardProps) {
   const router = useRouter();
-  const { toast } = useToast();
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSettingDefault, setIsSettingDefault] = useState(false);
@@ -83,18 +83,15 @@ export function AddressCard({ address }: AddressCardProps) {
         throw new Error("Failed to set default address");
       }
 
-      toast({
-        title: "Default Address Updated",
+      toast.success("Default Address Updated", {
         description: "This address has been set as your default address",
       });
 
       router.refresh();
     } catch (error) {
       console.error("Error setting default address:", error);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to set default address. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setIsSettingDefault(false);
@@ -112,8 +109,7 @@ export function AddressCard({ address }: AddressCardProps) {
         throw new Error("Failed to delete address");
       }
 
-      toast({
-        title: "Address Deleted",
+      toast.success("Address Deleted", {
         description: "Your address has been deleted successfully",
       });
 
@@ -121,10 +117,8 @@ export function AddressCard({ address }: AddressCardProps) {
       router.refresh();
     } catch (error) {
       console.error("Error deleting address:", error);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to delete address. Please try again.",
-        variant: "destructive",
       });
     } finally {
       setIsDeleting(false);

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { X, Upload } from "lucide-react"
 
 interface BrandFormProps {
@@ -19,7 +19,7 @@ interface BrandFormProps {
 
 export default function BrandForm({ brand }: BrandFormProps) {
   const router = useRouter()
-  const { toast } = useToast()
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -62,11 +62,9 @@ export default function BrandForm({ brand }: BrandFormProps) {
         fileInputRef.current.value = ""
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload image",
-        variant: "destructive",
-      })
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload image"
+      )
     }
   }
 
@@ -101,18 +99,15 @@ export default function BrandForm({ brand }: BrandFormProps) {
         throw new Error(data.error || "Failed to save brand")
       }
 
-      toast({
-        title: "Success",
-        description: brand ? "Brand updated successfully" : "Brand created successfully",
-      })
+      toast.success(
+        brand ? "Brand updated successfully" : "Brand created successfully"
+      )
 
       router.push("/admin/brands")
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong",
-        variant: "destructive",
-      })
+      toast.error(
+        error instanceof Error ? error.message : "Something went wrong"
+      )
     } finally {
       setIsSubmitting(false)
     }

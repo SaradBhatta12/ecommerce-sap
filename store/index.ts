@@ -6,6 +6,7 @@ import { userApi } from './api/userApi'
 import { paymentApi } from './api/paymentApi'
 import { utilityApi } from './api/utilityApi'
 import { adminApi } from './api/adminApi'
+import { locationApi } from './api/locationApi'
 import cartReducer from './slices/cartSlice'
 import wishlistReducer from './slices/wishlistSlice'
 
@@ -18,6 +19,7 @@ export const store = configureStore({
     [paymentApi.reducerPath]: paymentApi.reducer,
     [utilityApi.reducerPath]: utilityApi.reducer,
     [adminApi.reducerPath]: adminApi.reducer,
+    [locationApi.reducerPath]: locationApi.reducer,
     cart: cartReducer,
     wishlist: wishlistReducer,
   },
@@ -31,6 +33,7 @@ export const store = configureStore({
       .concat(paymentApi.middleware)
       .concat(utilityApi.middleware)
       .concat(adminApi.middleware)
+      .concat(locationApi.middleware)
 })
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors
@@ -116,6 +119,23 @@ export {
   useUpdateDiscountMutation,
   useDeleteDiscountMutation,
 } from './api/adminApi'
+
+export {
+  // Location API hooks
+  useGetLocationTreeQuery,
+  useGetLocationsByParentQuery,
+  useGetLocationsByTypeQuery,
+  useGetCountriesQuery,
+  useGetProvincesByCountryQuery,
+  useGetCitiesByProvinceQuery,
+  useGetLandmarksByCityQuery,
+  useGetLocationByIdQuery,
+  useCreateLocationMutation,
+  useUpdateLocationMutation,
+  useDeleteLocationMutation,
+  useExportLocationsMutation,
+  useImportLocationsMutation,
+} from './api/locationApi'
 
 // Export cart actions and selectors
 export {

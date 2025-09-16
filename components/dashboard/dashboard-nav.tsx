@@ -17,19 +17,18 @@ import {
   Map,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useParams } from "next/navigation";
 
 interface DashboardNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function DashboardNav({ className, ...props }: DashboardNavProps) {
   const pathname = usePathname();
-  const { toast } = useToast();
+
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
-    toast({
-      title: "Signed Out",
+    toast.success("Signed Out", {
       description: "You have been signed out successfully",
     });
   };

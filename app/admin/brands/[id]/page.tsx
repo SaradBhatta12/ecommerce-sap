@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import BrandForm from "@/components/admin/brand-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useParams } from "next/navigation";
 
 export default function EditBrandPage() {
   const router = useRouter();
-  const { toast } = useToast();
+
   const [brand, setBrand] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const params = useParams();
@@ -28,12 +28,9 @@ export default function EditBrandPage() {
 
         setBrand(brandData.brand);
       } catch (error) {
-        toast({
-          title: "Error",
-          description:
-            error instanceof Error ? error.message : "Failed to fetch data",
-          variant: "destructive",
-        });
+        toast.error(
+          error instanceof Error ? error.message : "Failed to fetch data"
+        );
         router.push("/admin/brands");
       } finally {
         setIsLoading(false);

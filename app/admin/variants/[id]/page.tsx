@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import {
   Card,
@@ -53,7 +53,7 @@ interface VariantFormData {
 export default function EditVariantPage() {
   const router = useRouter();
   const params = useParams();
-  const { toast } = useToast();
+
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -80,11 +80,7 @@ export default function EditVariantPage() {
       const data = await response.json();
       setFormData(data.variant);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load variant data",
-        variant: "destructive",
-      });
+      toast.error("Failed to load variant data");
       router.push("/admin/variants");
     } finally {
       setIsLoadingData(false);
@@ -108,19 +104,13 @@ export default function EditVariantPage() {
         throw new Error("Failed to update variant");
       }
 
-      toast({
-        title: "Success",
-        description: "Variant updated successfully",
-      });
+      toast.success("Variant updated successfully");
 
       router.push("/admin/variants");
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to update variant",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update variant"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -136,19 +126,13 @@ export default function EditVariantPage() {
         throw new Error("Failed to delete variant");
       }
 
-      toast({
-        title: "Success",
-        description: "Variant deleted successfully",
-      });
+      toast.success("Variant deleted successfully");
 
       router.push("/admin/variants");
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to delete variant",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete variant"
+      );
     } finally {
       setIsDeleteDialogOpen(false);
     }

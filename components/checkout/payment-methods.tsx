@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { initiateEsewaPayment } from "@/lib/payment/esewa";
 import { initiateKhaltiPayment } from "@/lib/payment/khalti";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 interface PaymentMethodsProps {
   orderId: string;
@@ -23,7 +23,7 @@ export default function PaymentMethods({
   onPaymentComplete,
 }: PaymentMethodsProps) {
   const [paymentMethod, setPaymentMethod] = useState("esewa");
-  const { toast } = useToast();
+
 
   const handlePaymentMethodChange = (value: string) => {
     setPaymentMethod(value);

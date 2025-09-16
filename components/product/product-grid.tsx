@@ -5,7 +5,7 @@ import ProductCard from "@/components/product/product-card";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 // Store functionality removed
 
 interface Product {
@@ -35,7 +35,7 @@ export default function ProductGrid() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [visibleProducts, setVisibleProducts] = useState(9);
-  const { toast } = useToast();
+
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -70,10 +70,8 @@ export default function ProductGrid() {
         setVisibleProducts(9);
       } catch (error) {
         console.error("Error fetching products:", error);
-        toast({
-          title: "Error",
+        toast.error("Error", {
           description: "Failed to load products. Please try again.",
-          variant: "destructive",
         });
       } finally {
         setIsLoading(false);

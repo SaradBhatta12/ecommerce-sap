@@ -9,7 +9,7 @@ import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useGetWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store";
 
 interface Product {
@@ -45,7 +45,7 @@ export default function ProductCard({
   isWishlist = false,
 }: ProductCardProps) {
   const { data: session } = useSession();
-  const { toast } = useToast();
+
   const router = useRouter();
   
   // RTK Query hooks for wishlist operations
@@ -59,17 +59,14 @@ export default function ProductCard({
 
   const handleAddToCart = () => {
     // Cart functionality removed
-    toast({
-      title: "Cart functionality removed",
+    toast.error("Cart functionality removed", {
       description: "Cart functionality has been temporarily removed.",
-      variant: "destructive",
     });
   };
 
   const handleToggleWishlist = async () => {
     if (!session) {
-      toast({
-        title: "Authentication Required",
+      toast.warning("Authentication Required", {
         description: "Please sign in to add items to your wishlist",
       });
       router.push(
@@ -82,24 +79,20 @@ export default function ProductCard({
       if (isInWishlist) {
         // Remove from wishlist
         await removeFromWishlist({ productId: product._id }).unwrap();
-        toast({
-          title: "Removed from wishlist",
+        toast.success("Removed from wishlist", {
           description: `${product.name} has been removed from your wishlist.`,
         });
       } else {
         // Add to wishlist
         await addToWishlist({ productId: product._id }).unwrap();
-        toast({
-          title: "Added to wishlist",
+        toast.success("Added to wishlist", {
           description: `${product.name} has been added to your wishlist.`,
         });
       }
     } catch (error) {
       console.error("Error updating wishlist:", error);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to update wishlist. Please try again.",
-        variant: "destructive",
       });
   };
 

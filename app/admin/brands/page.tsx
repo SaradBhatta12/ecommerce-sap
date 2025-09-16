@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,7 @@ export default function BrandsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteBrandId, setDeleteBrandId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { toast } = useToast();
+
 
   useEffect(() => {
     fetchBrands();
@@ -50,11 +50,7 @@ export default function BrandsPage() {
       const data = await response.json();
       setBrands(data.brands || []);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch brands",
-        variant: "destructive",
-      });
+      toast.error("Failed to fetch brands");
     } finally {
       setIsLoading(false);
     }
@@ -73,20 +69,14 @@ export default function BrandsPage() {
         throw new Error(data.error || "Failed to delete brand");
       }
 
-      toast({
-        title: "Success",
-        description: "Brand deleted successfully",
-      });
+      toast.success("Brand deleted successfully");
 
       // Refresh brands list
       fetchBrands();
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to delete brand",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete brand"
+      );
     } finally {
       setDeleteBrandId(null);
       setIsDeleteDialogOpen(false);

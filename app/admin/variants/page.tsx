@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +57,7 @@ export default function VariantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteVariantId, setDeleteVariantId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { toast } = useToast();
+
 
   useEffect(() => {
     fetchVariants();
@@ -70,11 +70,7 @@ export default function VariantsPage() {
       const data = await response.json();
       setVariants(data.variants || []);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch variants",
-        variant: "destructive",
-      });
+      toast.error("Failed to fetch variants");
     } finally {
       setIsLoading(false);
     }
@@ -92,19 +88,13 @@ export default function VariantsPage() {
         throw new Error("Failed to delete variant");
       }
 
-      toast({
-        title: "Success",
-        description: "Variant deleted successfully",
-      });
+      toast.success("Variant deleted successfully");
 
       fetchVariants();
     } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to delete variant",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete variant"
+      );
     } finally {
       setDeleteVariantId(null);
       setIsDeleteDialogOpen(false);

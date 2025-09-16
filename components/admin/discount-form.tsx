@@ -33,7 +33,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface Product {
@@ -97,7 +97,7 @@ export function DiscountForm({ discountId }: DiscountFormProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const router = useRouter();
-  const { toast } = useToast();
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -168,11 +168,7 @@ export function DiscountForm({ discountId }: DiscountFormProps) {
       });
     } catch (error) {
       console.error("Error fetching discount:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load discount data",
-        variant: "destructive",
-      });
+      toast.error("Failed to load discount data");
     } finally {
       setIsFetching(false);
     }
@@ -201,21 +197,14 @@ export function DiscountForm({ discountId }: DiscountFormProps) {
         throw new Error(error.message || "Failed to save discount");
       }
 
-      toast({
-        title: "Success",
-        description: `Discount ${
-          discountId ? "updated" : "created"
-        } successfully`,
-      });
+      toast.success(
+        `Discount ${discountId ? "updated" : "created"} successfully`
+      );
 
       router.push("/admin/discounts");
     } catch (error: any) {
       console.error("Error saving discount:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save discount",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to save discount");
     } finally {
       setIsLoading(false);
     }

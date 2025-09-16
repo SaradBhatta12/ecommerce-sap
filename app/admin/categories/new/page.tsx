@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import CategoryForm from "@/components/admin/category-form"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function NewCategoryPage() {
   const router = useRouter()
-  const { toast } = useToast()
+
   const [categories, setCategories] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -20,11 +20,7 @@ export default function NewCategoryPage() {
         const data = await response.json()
         setCategories(data.categories || [])
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch categories",
-          variant: "destructive",
-        })
+        toast.error("Failed to fetch categories")
       } finally {
         setIsLoading(false)
       }

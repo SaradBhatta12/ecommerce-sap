@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, RefreshCw, Upload, User, Bell, Shield, Eye, EyeOff } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -48,7 +48,7 @@ export default function SettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const { toast } = useToast()
+
   
   // RTK Query hooks
   const { data: profileData, isLoading: isProfileLoading, error: profileError } = useGetUserProfileQuery()
@@ -102,17 +102,13 @@ export default function SettingsPage() {
   // Handle errors
   useEffect(() => {
     if (profileError) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to load profile data.",
-        variant: "destructive",
       })
     }
     if (notificationError) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to load notification preferences.",
-        variant: "destructive",
       })
     }
   }, [profileError, notificationError, toast])
@@ -122,15 +118,12 @@ export default function SettingsPage() {
     setIsRefreshing(true)
     try {
       // RTK Query will automatically refetch when we call the hooks again
-      toast({
-        title: "Data refreshed",
+      toast.success("Data refreshed", {
         description: "Your settings have been refreshed successfully.",
       })
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to refresh data. Please try again.",
-        variant: "destructive",
       })
     } finally {
       setIsRefreshing(false)
@@ -179,15 +172,12 @@ export default function SettingsPage() {
       }).unwrap()
 
       await update({ name: formData.name, image: formData.image })
-      toast({
-        title: "Profile updated",
+      toast.success("Profile updated", {
         description: "Your profile has been updated successfully.",
       })
     } catch (error: any) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error?.data?.message || "Something went wrong. Please try again.",
-        variant: "destructive",
       })
     }
   }
@@ -196,19 +186,15 @@ export default function SettingsPage() {
     e.preventDefault()
     
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "New passwords do not match.",
-        variant: "destructive",
       })
       return
     }
 
     if (passwordData.newPassword.length < 6) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Password must be at least 6 characters long.",
-        variant: "destructive",
       })
       return
     }
@@ -222,15 +208,12 @@ export default function SettingsPage() {
       }).unwrap()
 
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
-      toast({
-        title: "Password updated",
+      toast.success("Password updated", {
         description: "Your password has been updated successfully.",
       })
     } catch (error: any) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error?.data?.message || "Something went wrong. Please try again.",
-        variant: "destructive",
       })
     }
   }
@@ -246,10 +229,8 @@ export default function SettingsPage() {
     } catch (error: any) {
       // Revert on error
       setNotifications(notifications)
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error?.data?.message || "Failed to update notification preferences.",
-        variant: "destructive",
       })
     }
   }
