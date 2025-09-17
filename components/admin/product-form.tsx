@@ -158,7 +158,7 @@ export function EnhancedProductForm({
   // RTK Query mutations
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
-  
+
   const loading = isCreating || isUpdating;
 
   const form = useForm<ProductFormValues>({
@@ -186,7 +186,7 @@ export function EnhancedProductForm({
   // Check if variants exist and are properly configured
   const variants = form.watch("variant") || [];
   const hasVariants = variants.length > 0;
-  
+
   // Check if create button should be disabled
   const shouldDisableCreateButton = hasVariants && activeTab !== "advanced" && !initialData;
 
@@ -210,7 +210,7 @@ export function EnhancedProductForm({
         tags: initialData.tags || [],
         variant: initialData.variant || [],
       };
-      
+
       form.reset(transformedData);
       setImages(initialData.images || []);
     }
@@ -254,11 +254,11 @@ export function EnhancedProductForm({
           id: initialData._id,
           data: productData,
         }).unwrap();
-        
+
         toast.success("Product updated successfully");
       } else {
         await createProduct(productData).unwrap();
-        
+
         toast.success("Product created successfully");
       }
 
@@ -266,12 +266,12 @@ export function EnhancedProductForm({
       router.refresh();
     } catch (error: any) {
       console.error("Form submission error:", error);
-      
+
       // Handle RTK Query errors
-      const errorMessage = error?.data?.message || 
-                          error?.message || 
-                          "An unexpected error occurred";
-      
+      const errorMessage = error?.data?.message ||
+        error?.message ||
+        "An unexpected error occurred";
+
       toast.error(`Failed to ${initialData ? 'update' : 'create'} product: ${errorMessage}`);
     }
   };
@@ -348,7 +348,7 @@ export function EnhancedProductForm({
           </p>
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="space-y-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
@@ -887,7 +887,7 @@ export function EnhancedProductForm({
               Cancel
             </Button>
             <Button
-              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
               disabled={loading || shouldDisableCreateButton}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
@@ -904,7 +904,7 @@ export function EnhancedProductForm({
               )}
             </Button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

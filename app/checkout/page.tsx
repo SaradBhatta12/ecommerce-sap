@@ -206,7 +206,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      // For online payments (eSewa, Khalti), store order data in sessionStorage first
+      // For online payments (eSewa, Khalti), store order data in sessionStorage
+      // and initiate payment first
       const orderData = {
         addressId: selectedAddress,
         paymentMethod,
@@ -230,29 +231,27 @@ export default function CheckoutPage() {
       };
 
       // Store order data for payment completion
-      sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
+      sessionStorage.setItem('orderData', JSON.stringify(orderData));
       
-      // Show success message and redirect to payment
-      toast.success("Order prepared! Redirecting to payment gateway...");
+      // Clear cart before payment
+      dispatch(clearCart());
       
-      // Trigger payment initiation based on selected method
-      if (paymentMethod === 'esewa') {
-        const { initiateEsewaPayment } = await import('@/lib/payment/esewa');
-        await initiateEsewaPayment({
-          amount: total,
-          orderData: orderData
-        });
-      } else if (paymentMethod === 'khalti') {
-        const { initiateKhaltiPayment } = await import('@/lib/payment/khalti');
-        await initiateKhaltiPayment({
-          amount: total,
-          orderData: orderData
-        });
+      // Initiate payment through PaymentMethods component
+      if (window.initiatePayment) {
+        window.initiatePayment(paymentMethod);
+      } else {
+        toast.error("Payment system not ready. Please try again.");
       }
       
     } catch (error: any) {
       console.error("Error processing checkout:", error);
       toast.error(error?.data?.message || "Failed to process checkout. Please try again.");
+    }
+  };
+
+  const handlePaymentInitiation = () => {
+    if (paymentMethod === "esewa" || paymentMethod === "khalti") {
+      handleCheckout();
     }
   };
 
@@ -343,7 +342,7 @@ export default function CheckoutPage() {
                   // Handle payment completion
                 }}
                 amount={total}
-                onOrderDataReady={() => handleCheckout()}
+                onPaymentInitiation={handlePaymentInitiation}
               />
             </CardContent>
           </Card>

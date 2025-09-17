@@ -1,0 +1,6 @@
+{
+    "search.useGlobalIgnoreFiles": true,
+    "search.exclude": {
+        "": true
+    }
+}
