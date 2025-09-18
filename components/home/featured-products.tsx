@@ -1,87 +1,72 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/product/product-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProductGridSkeleton } from "@/components/ui/loading-states";
 // Store functionality removed
 
-export default function FeaturedProducts() {
+function FeaturedProducts() {
   const domain = "default"; // Multi-tenant functionality removed
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [startIndex, setStartIndex] = useState(0);
   const itemsPerPage = 4;
 
+  const fetchFeaturedProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        "/api/products?isFeatured=true&limit=6&domain=" + domain
+      );
+
+      const data = await response.json();
+      setFeaturedProducts(data.products || []);
+    } catch (error) {
+      console.error("Error fetching featured products:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [domain]);
+
   useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      try {
-        const response = await fetch(
-          "/api/products?isFeatured=true&limit=6&domain=" + domain
-        );
-
-        const data = await response.json();
-        setFeaturedProducts(data.products || []);
-      } catch (error) {
-        console.error("Error fetching featured products:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchFeaturedProducts();
-  }, []);
+  }, [fetchFeaturedProducts]);
 
-  const endIndex = Math.min(startIndex + itemsPerPage, featuredProducts.length);
-  const visibleProducts = featuredProducts.slice(startIndex, endIndex);
+  const { endIndex, visibleProducts } = useMemo(() => {
+    const end = Math.min(startIndex + itemsPerPage, featuredProducts.length);
+    const visible = featuredProducts.slice(startIndex, end);
+    return { endIndex: end, visibleProducts: visible };
+  }, [startIndex, itemsPerPage, featuredProducts]);
 
-  const nextProducts = () => {
+  const nextProducts = useCallback(() => {
     if (endIndex < featuredProducts.length) {
-      setStartIndex(startIndex + 1);
+      setStartIndex(prev => prev + 1);
     }
-  };
+  }, [endIndex, featuredProducts.length]);
 
-  const prevProducts = () => {
+  const prevProducts = useCallback(() => {
     if (startIndex > 0) {
-      setStartIndex(startIndex - 1);
+      setStartIndex(prev => prev - 1);
     }
-  };
+  }, [startIndex]);
 
   if (isLoading) {
     return (
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-slate-50 via-white to-blue-50 no-shadows no-rounded relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5"></div>
-        <div className="fullscreen-container relative">
-          <div className="responsive-container">
-            <div className="mb-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-              <div className="space-y-3">
-                <h2 className="text-responsive-2xl font-bold tracking-tight font-display bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Featured Products
-                </h2>
-                <p className="text-lg text-gray-600 font-light tracking-wide">Discover our handpicked favorites</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Button variant="outline" size="lg" className="border-2 border-gray-300 hover:border-blue-500 transition-all duration-300" disabled>
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <Button variant="outline" size="lg" className="border-2 border-gray-300 hover:border-blue-500 transition-all duration-300" disabled>
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="space-y-4 animate-pulse">
-                  <Skeleton className="aspect-[3/4] w-full rounded-xl bg-gradient-to-br from-gray-200 to-gray-300" />
-                  <Skeleton className="h-5 w-3/4 rounded-lg bg-gradient-to-r from-gray-200 to-gray-300" />
-                  <Skeleton className="h-4 w-1/2 rounded-lg bg-gradient-to-r from-gray-200 to-gray-300" />
-                  <Skeleton className="h-12 w-full rounded-lg bg-gradient-to-r from-gray-200 to-gray-300" />
-                </div>
-              ))}
-            </div>
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          <div className="mb-8 text-center">
+            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+              Featured Products
+            </h2>
+            <p className="text-muted-foreground">
+              Discover our handpicked selection of premium products
+            </p>
           </div>
+          <ProductGridSkeleton count={4} />
         </div>
       </section>
     );
@@ -154,4 +139,6 @@ export default function FeaturedProducts() {
       </div>
     </section>
   );
-}
+};
+
+export default FeaturedProducts;

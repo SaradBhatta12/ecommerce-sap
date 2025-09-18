@@ -192,9 +192,18 @@ export default function SettingsPage() {
       return
     }
 
-    if (passwordData.newPassword.length < 6) {
+    if (passwordData.newPassword.length < 8) {
       toast.error("Error", {
-        description: "Password must be at least 6 characters long.",
+        description: "Password must be at least 8 characters long.",
+      })
+      return
+    }
+
+    // Check password complexity
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+    if (!passwordRegex.test(passwordData.newPassword)) {
+      toast.error("Error", {
+        description: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
       })
       return
     }

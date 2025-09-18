@@ -65,7 +65,13 @@ export default function DashboardPage() {
     isLoading: wishlistLoading,
     error: wishlistError,
     refetch: refetchWishlist,
-  } = useGetWishlistQuery();
+  } = useGetWishlistQuery(undefined, {
+    skip: !session?.user?.email,
+    // Prevent unnecessary refetches
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+    refetchOnReconnect: true,
+  });
 
   const {
     data: addressesData,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -8,25 +8,26 @@ interface OverviewProps {
   showDetailed?: boolean
 }
 
-export function Overview({ showDetailed = false }: OverviewProps) {
+export const Overview = React.memo(function Overview({ showDetailed = false }: OverviewProps) {
   const [data, setData] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`/api/admin/analytics?detailed=${showDetailed}`)
-        const result = await response.json()
-        setData(result.data)
-      } catch (error) {
-        console.error("Failed to fetch analytics data:", error)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch(`/api/admin/analytics?detailed=${showDetailed}`)
+      const result = await response.json()
+      setData(result.data)
+    } catch (error) {
+      console.error("Failed to fetch analytics data:", error)
+    } finally {
+      setIsLoading(false)
     }
-
-    fetchData()
   }, [showDetailed])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (isLoading) {
     return <Skeleton className="h-[350px] w-full" />
@@ -58,4 +59,4 @@ export function Overview({ showDetailed = false }: OverviewProps) {
       </BarChart>
     </ResponsiveContainer>
   )
-}
+});

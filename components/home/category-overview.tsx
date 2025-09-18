@@ -1,50 +1,49 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CategoryGridSkeleton } from "@/components/ui/loading-states";
 // Store functionality removed
 
-export default function CategoryOverview() {
+const CategoryOverview = React.memo(function CategoryOverview() {
   const domain = "default"; // Multi-tenant functionality removed
 
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(`/api/categories?&domain=${domain}`);
-        const data = await response.json();
-        setCategories(data.categories || []);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchCategories = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/categories?&domain=${domain}`);
+      const data = await response.json();
+      setCategories(data.categories || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [domain]);
 
+  useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   if (isLoading) {
     return (
       <section className="py-12">
-        <h2 className="mb-6 text-2xl font-bold tracking-tight md:text-3xl">
-          Shop by Category
-        </h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <Skeleton className="aspect-square" />
-              <CardContent className="p-4">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="mt-2 h-3 w-1/2" />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="container mx-auto px-4">
+          <div className="mb-8 text-center">
+            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+              Shop by Category
+            </h2>
+            <p className="text-muted-foreground">
+              Explore our wide range of product categories
+            </p>
+          </div>
+          <CategoryGridSkeleton count={6} />
         </div>
       </section>
     );
@@ -86,4 +85,6 @@ export default function CategoryOverview() {
       </div>
     </section>
   );
-}
+});
+
+export default CategoryOverview;

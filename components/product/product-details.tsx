@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, ReactNode } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
 import { Heart, Minus, Plus, Share2, ShoppingCart, Star } from "lucide-react"
@@ -10,8 +10,42 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { useGetWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store"
 
+interface Product {
+  reviews: number
+  rating: number
+  discount: ReactNode
+  tags: boolean
+  _id: string
+  name: string
+  slug: string
+  description: string
+  price: number
+  discountPrice?: number
+  images: string[]
+  category: {
+    _id: string
+    name: string
+    slug: string
+  }
+  brand?: {
+    _id: string
+    name: string
+    slug: string
+  }
+  stock: number
+  isNew?: boolean
+  isFeatured?: boolean
+  isOnSale?: boolean
+}
+
+interface WishlistItem {
+  product: {
+    _id: string
+  }
+}
+
 interface ProductDetailsProps {
-  product: any
+  product: Product
 }
 
 export default function ProductDetails({ product }: ProductDetailsProps) {
@@ -23,12 +57,18 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
   const [quantity, setQuantity] = useState(1)
   // RTK Query hooks for wishlist operations
-  const { data: wishlistData } = useGetWishlistQuery()
+  const { data: wishlistData } = useGetWishlistQuery(undefined, {
+    skip: !session?.user?.email,
+    // Prevent unnecessary refetches
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+    refetchOnReconnect: true,
+  })
   const [addToWishlist, { isLoading: isAddingToWishlist }] = useAddToWishlistMutation()
   const [removeFromWishlist, { isLoading: isRemovingFromWishlist }] = useRemoveFromWishlistMutation()
 
   // Check if product is in wishlist
-  const isInWishlist = wishlistData?.wishlist?.some((item: any) => item.product._id === product._id) || false
+  const isInWishlist = wishlistData?.wishlist?.some((item: WishlistItem) => item.product._id === product._id) || false
   const isWishlistLoading = isAddingToWishlist || isRemovingFromWishlist
 
   const handleAddToCart = () => {
@@ -94,10 +134,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           url: window.location.href,
         })
         .then(() => {
-          toast({
-            title: "Shared successfully",
-            description: "Product has been shared",
-          })
+          toast.success("Shared successfully")
         })
         .catch((error) => {
           console.error("Error sharing:", error)
@@ -105,10 +142,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     } else {
       // Fallback for browsers that don't support the Web Share API
       navigator.clipboard.writeText(window.location.href)
-      toast({
-        title: "Link copied",
-        description: "Product link has been copied to clipboard",
-      })
+     toast.success("Product link has been copied to clipboard")
     }
   }
 
@@ -221,11 +255,11 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             <p className="text-sm text-muted-foreground">{product.brand.name}</p>
           </div>
         )}
-        {product.tags && product.tags.length > 0 && (
+        {product.tags && product.tags?.length > 0 && (
           <div className="col-span-2">
             <span className="text-sm font-medium">Tags:</span>
             <div className="mt-1 flex flex-wrap gap-1">
-              {product.tags.map((tag: string) => (
+              {product?.tags?.map((tag: string) => (
                 <Badge key={tag} variant="outline">
                   {tag}
                 </Badge>

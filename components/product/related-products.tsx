@@ -1,65 +1,102 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/product/product-card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ProductGridSkeleton } from "@/components/ui/loading-states";
+
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  category?: string;
+  images: string[];
+  rating?: number;
+  reviews?: number;
+  isNew?: boolean;
+  isFeatured?: boolean;
+  isOnSale?: boolean;
+  discount?: number;
+  discountPrice?: number;
+  slug: string;
+  stock?: number;
+}
+
+interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+}
 
 interface RelatedProductsProps {
-  categoryId: string;
+  categoryId: string | Category;
   currentProductId: string;
 }
 
-export default function RelatedProducts({
+const RelatedProducts = React.memo(function RelatedProducts({
   categoryId,
   currentProductId,
 }: RelatedProductsProps) {
-  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [startIndex, setStartIndex] = useState(0);
 
-  useEffect(() => {
-    const fetchRelatedProducts = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch(
-          `/api/products?category=${categoryId._id}&limit=6`
-        );
-        const data = await response.json();
+  const fetchRelatedProducts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Handle both string and object categoryId
+      const categoryIdValue = typeof categoryId === 'string' ? categoryId : categoryId._id;
+      
+      const response = await fetch(
+        `/api/products?category=${categoryIdValue}&limit=6`
+      );
+      const data = await response.json();
 
-        // Filter out the current product
-        const filteredProducts = data?.products?.filter(
-          (product: any) => product._id !== currentProductId
-        );
-        setRelatedProducts(filteredProducts || []);
-      } catch (error) {
-        console.error("Error fetching related products:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (categoryId) {
-      fetchRelatedProducts();
+      // Filter out the current product
+      const filteredProducts = data?.products?.filter(
+        (product: Product) => product._id !== currentProductId
+      ) || [];
+      
+      setRelatedProducts(filteredProducts);
+    } catch (error) {
+      console.error("Error fetching related products:", error);
+      setRelatedProducts([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [categoryId, currentProductId]);
 
+  useEffect(() => {
+    if (categoryId) {
+      fetchRelatedProducts();
+    }
+  }, [fetchRelatedProducts]);
+
   const itemsPerPage = 4;
-  const endIndex = Math.min(startIndex + itemsPerPage, relatedProducts.length);
-  const visibleProducts = relatedProducts.slice(startIndex, endIndex);
+  
+  const endIndex = useMemo(() => 
+    Math.min(startIndex + itemsPerPage, relatedProducts.length), 
+    [startIndex, relatedProducts.length]
+  );
+  
+  const visibleProducts = useMemo(() => 
+    relatedProducts.slice(startIndex, endIndex), 
+    [relatedProducts, startIndex, endIndex]
+  );
 
-  const nextProducts = () => {
+  const nextProducts = useCallback(() => {
     if (endIndex < relatedProducts.length) {
-      setStartIndex(startIndex + 1);
+      setStartIndex(prev => prev + 1);
     }
-  };
+  }, [endIndex, relatedProducts.length]);
 
-  const prevProducts = () => {
+  const prevProducts = useCallback(() => {
     if (startIndex > 0) {
-      setStartIndex(startIndex - 1);
+      setStartIndex(prev => prev - 1);
     }
-  };
+  }, [startIndex]);
 
   if (isLoading) {
     return (
@@ -75,16 +112,7 @@ export default function RelatedProducts({
             </Button>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="space-y-4">
-              <Skeleton className="aspect-square" />
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ))}
-        </div>
+        <ProductGridSkeleton count={4} />
       </section>
     );
   }
@@ -125,4 +153,6 @@ export default function RelatedProducts({
       </div>
     </section>
   );
-}
+});
+
+export default RelatedProducts;

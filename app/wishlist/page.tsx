@@ -17,7 +17,11 @@ export default function WishlistPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { data: wishlistItems = [], isLoading, error } = useGetWishlistQuery(undefined, {
-    skip: !session?.user?.email
+    skip: !session?.user?.email,
+    // Prevent unnecessary refetches
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+    refetchOnReconnect: true,
   });
   const [removeFromWishlist, { isLoading: isRemoving }] = useRemoveFromWishlistMutation();
 

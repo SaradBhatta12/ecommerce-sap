@@ -38,8 +38,13 @@ export function initiateEsewaPayment({
 }: EsewaPaymentParams): void {
   // Get environment variables
   const merchantCode = process.env.NEXT_PUBLIC_ESEWA_MERCHANT_CODE || 'EPAYTEST';
-  const secretKey = process.env.NEXT_PUBLIC_ESEWA_SECRET_KEY || '8gBm/:&EnhH.1/q';
+  const secretKey = process.env.NEXT_PUBLIC_ESEWA_SECRET_KEY;
   const paymentUrl = process.env.NEXT_PUBLIC_ESEWA_PAYMENT_URL || 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+
+  // Validate required environment variables
+  if (!secretKey) {
+    throw new Error('eSewa secret key is not configured. Please set NEXT_PUBLIC_ESEWA_SECRET_KEY environment variable.');
+  }
 
   // Generate unique transaction UUID
   const transactionUuid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

@@ -11,8 +11,21 @@ import { addToWishlist, removeFromWishlist } from "@/lib/api-endpoints"
 import { toast } from "sonner"
 // Store functionality removed
 
+interface Product {
+  _id: string
+  name: string
+  slug: string
+  price: number
+  discountPrice?: number
+  images: string[]
+  isNew?: boolean
+  isFeatured?: boolean
+  isOnSale?: boolean
+  stock?: number
+}
+
 interface FuturisticProductCardProps {
-  product: any
+  product: Product
   inWishlist?: boolean
 }
 
@@ -78,6 +91,7 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
         <button
           onClick={handleWishlistToggle}
           className="absolute top-2 right-2 z-10 bg-black/40 backdrop-blur-sm p-2 rounded-full transition-all duration-300 hover:bg-black/60"
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
           <Heart className={`h-5 w-5 ${isWishlisted ? "fill-red-500 text-red-500" : "text-white"}`} />
         </button>
@@ -99,6 +113,7 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
               size="sm"
               className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               onClick={() => setShowQuickView(true)}
+              aria-label={`Quick view of ${product.name}`}
             >
               <Eye className="mr-2 h-4 w-4" />
               Quick View
@@ -140,6 +155,7 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
               onClick={handleAddToCart}
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
               disabled={isAddingToCart}
+              aria-label={`Add ${product.name} to cart`}
             >
               {isAddingToCart ? (
                 <motion.div initial={{ scale: 1 }} animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}>

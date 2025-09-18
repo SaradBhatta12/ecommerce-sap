@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -9,7 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Skeleton } from "@/components/ui/skeleton"
 import { useGetCategoriesQuery, useGetBrandsQuery } from "@/store/api/productsApi"
 
-export default function ProductFilters() {
+  function ProductFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [priceRange, setPriceRange] = useState([0, 20000])
@@ -65,7 +65,7 @@ export default function ProductFilters() {
     }
   }, [searchParams])
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString())
 
     // Clear existing filter params
@@ -81,37 +81,41 @@ export default function ProductFilters() {
     }
 
     // Add selected brands
-    if (selectedBrands.length === 1) {
-      params.set("brand", selectedBrands[0])
+    if (selectedBrands.length > 0) {
+      selectedBrands.forEach((brand) => {
+        params.append("brand", brand)
+      })
     }
 
     // Add price range
-    params.set("minPrice", priceRange[0].toString())
-    params.set("maxPrice", priceRange[1].toString())
+    if (priceRange[0] > 0 || priceRange[1] < 20000) {
+      params.set("minPrice", priceRange[0].toString())
+      params.set("maxPrice", priceRange[1].toString())
+    }
 
     // Add sale filter
     if (onSale) {
       params.set("onSale", "true")
     }
 
-    router.push(`/shop?${params.toString()}`)
-  }
+    router.push(`/products?${params.toString()}`)
+  }, [router, searchParams, selectedCategories, selectedBrands, priceRange, onSale])
 
-  const resetFilters = () => {
+  const clearFilters = useCallback(() => {
+    setPriceRange([0, 20000])
     setSelectedCategories([])
     setSelectedBrands([])
-    setPriceRange([0, 20000])
     setOnSale(false)
-    router.push("/shop")
-  }
+    router.push("/products")
+  }, [router])
 
-  const toggleCategory = (categoryId: string) => {
+  const handleCategoryChange = useCallback((categoryId: string) => {
     setSelectedCategories((prev) => (prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [categoryId]))
-  }
+  }, [])
 
-  const toggleBrand = (brandId: string) => {
+  const handleBrandChange = useCallback((brandId: string) => {
     setSelectedBrands((prev) => (prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]))
-  }
+  }, [])
 
   if (isLoading) {
     return (
@@ -165,7 +169,7 @@ export default function ProductFilters() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Filters</h3>
-        <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs">
+        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
           Reset All
         </Button>
       </div>
@@ -182,7 +186,7 @@ export default function ProductFilters() {
                   <Checkbox
                     id={`category-${category._id}`}
                     checked={selectedCategories.includes(category._id)}
-                    onCheckedChange={() => toggleCategory(category._id)}
+                    onCheckedChange={() => handleCategoryChange(category._id)}
                     className="h-4 w-4"
                   />
                   <label
@@ -230,7 +234,7 @@ export default function ProductFilters() {
                   <Checkbox
                     id={`brand-${brand._id}`}
                     checked={selectedBrands.includes(brand._id)}
-                    onCheckedChange={() => toggleBrand(brand._id)}
+                    onCheckedChange={() => handleBrandChange(brand._id)}
                     className="h-4 w-4"
                   />
                   <label
@@ -277,4 +281,6 @@ export default function ProductFilters() {
       </div>
     </div>
   )
-}
+};
+
+export default ProductFilters;

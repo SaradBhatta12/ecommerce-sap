@@ -37,7 +37,11 @@ function Header() {
   
   // Get wishlist count for authenticated users
   const { data: wishlistItems = [] } = useGetWishlistQuery(undefined, {
-    skip: !session?.user?.email
+    skip: !session?.user?.email,
+    // Prevent unnecessary refetches
+    refetchOnMountOrArgChange: false,
+    refetchOnFocus: false,
+    refetchOnReconnect: true,
   });
 
   // Prevent hydration mismatch by ensuring client-side rendering

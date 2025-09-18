@@ -79,7 +79,7 @@ export function ProductViewer3D({ modelPath, fallbackImage }: ProductViewerProps
         <div className="w-full h-full flex items-center justify-center">
           <img
             src={fallbackImage || "/placeholder.svg"}
-            alt="Product"
+            alt="3D product view"
             className="max-h-full max-w-full object-contain"
           />
         </div>
@@ -104,13 +104,13 @@ export function ProductViewer3D({ modelPath, fallbackImage }: ProductViewerProps
           </Canvas>
 
           <div className="absolute bottom-4 right-4 flex space-x-2">
-            <Button variant="secondary" size="icon" className="bg-black/50 hover:bg-black/70" onClick={handleZoomIn}>
+            <Button variant="secondary" size="icon" className="bg-black/50 hover:bg-black/70" onClick={handleZoomIn} aria-label="Zoom in">
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button variant="secondary" size="icon" className="bg-black/50 hover:bg-black/70" onClick={handleZoomOut}>
+            <Button variant="secondary" size="icon" className="bg-black/50 hover:bg-black/70" onClick={handleZoomOut} aria-label="Zoom out">
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <Button variant="secondary" size="icon" className="bg-black/50 hover:bg-black/70" onClick={handleReset}>
+            <Button variant="secondary" size="icon" className="bg-black/50 hover:bg-black/70" onClick={handleReset} aria-label="Reset view">
               <RotateCcw className="h-4 w-4" />
             </Button>
           </div>

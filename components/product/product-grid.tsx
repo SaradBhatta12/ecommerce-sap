@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
+import { ProductGridSkeleton } from "@/components/ui/loading-states";
 import ProductCard from "@/components/product/product-card";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
@@ -21,108 +22,95 @@ interface Product {
   isFeatured?: boolean;
   isOnSale?: boolean;
   discount?: number;
+  category?: {
+    _id: string;
+    name: string;
+    slug: string;
+  };
+  brand?: {
+    _id: string;
+    name: string;
+    slug: string;
+  };
+  originalPrice?: number;
 }
 
-export default function ProductGrid() {
-  const domain = "default"; // Multi-tenant functionality removed
-  const searchParams = useSearchParams();
+const ProductGrid = React.memo(function ProductGrid() {
   const [visibleProducts, setVisibleProducts] = useState(9);
+  const searchParams = useSearchParams();
 
-  // Build query parameters from search params
   const queryParams = useMemo(() => {
-    const params: any = {};
-    
-    // Add all existing search params
-    for (const [key, value] of searchParams.entries()) {
-      params[key] = value;
-    }
+    return {
+      category: searchParams.get("category"),
+      brand: searchParams.get("brand"),
+      minPrice: searchParams.get("minPrice"),
+      maxPrice: searchParams.get("maxPrice"),
+      onSale: searchParams.get("onSale"),
+      search: searchParams.get("search"),
+      sort: searchParams.get("sort"),
+    };
+  }, [searchParams]);
 
-    // Set default limit if not provided
-    if (!params.limit) {
-      params.limit = 20;
-    }
-
-    // Append domain
-    params.domain = domain;
-
-    return params;
-  }, [searchParams, domain]);
-
-  // Use RTK Query hook to fetch products
   const {
     data: productsData,
     error,
     isLoading,
-    isError
-  } = useGetProductsQuery(queryParams);
-
-  // Handle error state
-  if (isError) {
-    console.error("Error fetching products:", error);
-    toast.error("Error", {
-      description: "Failed to load products. Please try again.",
-    });
-  }
+  } = useGetProductsQuery({
+    category: queryParams.category || undefined,
+    brand: queryParams.brand || undefined,
+    minPrice: queryParams.minPrice ? Number(queryParams.minPrice) : undefined,
+    maxPrice: queryParams.maxPrice ? Number(queryParams.maxPrice) : undefined,
+    onSale: queryParams.onSale === "true" ? true : undefined,
+    search: queryParams.search || undefined,
+    sort: queryParams.sort || undefined,
+    limit: 50,
+  });
 
   const products = productsData?.products || [];
-  const pagination = {
-    total: productsData?.totalProducts || 0,
-    page: productsData?.currentPage || 1,
-    limit: queryParams.limit || 20,
-    pages: productsData?.totalPages || 1,
-  };
 
-  const loadMore = () => {
-    setVisibleProducts((prev) => Math.min(prev + 6, products.length));
-  };
+  const loadMore = useCallback(() => {
+    setVisibleProducts(prev => Math.min(prev + 9, products.length));
+  }, [products.length]);
 
-  if (isLoading) {
+  const hasMore = useMemo(() => visibleProducts < products.length, [visibleProducts, products.length]);
+
+  if (error) {
     return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="space-y-4">
-            <Skeleton className="aspect-square" />
-            <div className="space-y-2">
-              <Skeleton className="h-3 w-1/2" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/4 ml-auto" />
-            </div>
-          </div>
-        ))}
+      <div className="text-center py-12">
+        <p className="text-red-500">Error loading products. Please try again.</p>
       </div>
     );
   }
 
+  if (isLoading) {
+    return <ProductGridSkeleton count={9} />;
+  }
+
   if (products.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed bg-muted/20">
-        <div className="text-center space-y-2">
-          <p className="text-lg font-medium text-muted-foreground">
-            No products found
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Try adjusting your filters or search criteria
-          </p>
-        </div>
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No products found.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {products.slice(0, visibleProducts).map((product) => (
-          <ProductCard key={product._id} product={product} />
+          <ProductCard key={product._id as any} product={product as any} />
         ))}
       </div>
 
-      {visibleProducts < products.length && (
-        <div className="flex justify-center pt-4">
-          <Button onClick={loadMore} variant="outline" size="lg" className="min-w-[120px]">
-            Load More ({products.length - visibleProducts} remaining)
+      {hasMore && (
+        <div className="text-center">
+          <Button onClick={loadMore} variant="outline" size="lg">
+            Load More Products
           </Button>
         </div>
       )}
     </div>
   );
-}
+});
+
+export default ProductGrid;
