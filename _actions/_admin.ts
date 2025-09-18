@@ -186,12 +186,11 @@ export const updateAdminProfile = async (
       status: 200,
     };
   } catch (error) {
-    console.log(error);
-    return {
-      success: false,
-      message: "Internal server error",
-      status: 500,
-    };
+    // Log error for debugging in development only
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Admin action error:', error);
+    }
+    return { success: false, error: "Failed to perform admin action" };
   }
 };
 
@@ -320,11 +319,10 @@ export const updateStoreInfo = async (
       status: 200,
     };
   } catch (error) {
-    console.error("Update error:", error);
-    return {
-      success: false,
-      message: "Internal server error",
-      status: 500,
-    };
+    // Log error for debugging in development only
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Admin action error:', error);
+    }
+    return { success: false, error: "Failed to perform admin action" };
   }
 };

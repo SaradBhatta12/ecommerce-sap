@@ -90,6 +90,7 @@ function Header() {
                 size="icon"
                 className="p-2 hover:bg-gray-100 transition-colors duration-200"
                 disabled
+                aria-label="Open navigation menu"
               >
                 <Menu className="h-6 w-6" />
               </Button>
@@ -123,7 +124,7 @@ function Header() {
             </nav>
             {/* Right side - Icons */}
             <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200" disabled>
+              <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200" disabled aria-label="Search products">
                 <Search className="h-5 w-5" />
               </Button>
               <Button
@@ -132,21 +133,22 @@ function Header() {
                 className="p-2 hover:bg-gray-100 transition-colors duration-200 relative"
                 onClick={handleWishlistClick}
                 disabled
+                aria-label="View wishlist"
               >
                 <Heart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-black text-white text-xs h-5 w-5 flex items-center justify-center font-medium">
+                <span className="absolute -top-1 -right-1 bg-black text-white text-xs h-5 w-5 flex items-center justify-center font-medium" aria-hidden="true">
                   0
                 </span>
               </Button>
               <Link href="/cart">
-                <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200 relative">
+                <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200 relative" aria-label="View shopping cart">
                   <ShoppingCart className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-black text-white text-xs h-5 w-5 flex items-center justify-center font-medium">
+                  <span className="absolute -top-1 -right-1 bg-black text-white text-xs h-5 w-5 flex items-center justify-center font-medium" aria-hidden="true">
                     0
                   </span>
                 </Button>
               </Link>
-              <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200" disabled>
+              <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200" disabled aria-label="User account">
                 <User className="h-5 w-5" />
               </Button>
             </div>
@@ -169,6 +171,7 @@ function Header() {
                 size="icon"
                 className="p-2 hover:bg-gray-100 transition-colors duration-200"
                 onClick={toggleSidebar}
+                aria-label="Open navigation menu"
               >
                 <Menu className="h-6 w-6" />
               </Button>
@@ -211,6 +214,7 @@ function Header() {
                 size="icon"
                 className="p-2 hover:bg-gray-100 transition-colors duration-200"
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
+                aria-label="Toggle search"
               >
                 <Search className="h-5 w-5" />
               </Button>
@@ -219,18 +223,19 @@ function Header() {
                 size="icon"
                 className="p-2 hover:bg-gray-100 transition-colors duration-200 relative"
                 onClick={handleWishlistClick}
+                aria-label="View wishlist"
               >
                 <Heart className="h-5 w-5" />
                 {isClient && session && wishlistItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs h-5 w-5 flex items-center justify-center font-medium">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs h-5 w-5 flex items-center justify-center font-medium" aria-hidden="true">
                     {wishlistItems.length}
                   </span>
                 )}
               </Button>
               <Link href="/cart">
-                <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200 relative">
+                <Button variant="ghost" size="icon" className="p-2 hover:bg-gray-100 transition-colors duration-200 relative" aria-label="View shopping cart">
                   <ShoppingCart className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-black text-white text-xs h-5 w-5 flex items-center justify-center font-medium">
+                  <span className="absolute -top-1 -right-1 bg-black text-white text-xs h-5 w-5 flex items-center justify-center font-medium" aria-hidden="true">
                     {isClient ? (cartItems?.length || 0) : 0}
                   </span>
                 </Button>
@@ -240,6 +245,7 @@ function Header() {
                 size="icon"
                 className="p-2 hover:bg-gray-100 transition-colors duration-200"
                 onClick={() => router.push("/auth/login")}
+                aria-label="User account"
               >
                 <User className="h-5 w-5" />
               </Button>
@@ -257,6 +263,7 @@ function Header() {
                   className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Search products"
                 />
               </form>
             </div>
@@ -302,6 +309,7 @@ function Header() {
               size="icon"
               className="p-3 hover:bg-gray-50 transition-all duration-300 hover:scale-110"
               onClick={closeSidebar}
+              aria-label="Close navigation menu"
             >
               <X className="h-6 w-6" />
             </Button>
