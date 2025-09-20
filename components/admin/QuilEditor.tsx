@@ -68,8 +68,19 @@ const QuilEditor = ({
 
         // Set initial content
         if (value && quillInstanceRef.current) {
-          const delta = quillInstanceRef.current.clipboard.convert(value);
-          quillInstanceRef.current.setContents(delta, "silent");
+          try {
+            // Try to set HTML content directly first
+            quillInstanceRef.current.root.innerHTML = value;
+          } catch (error) {
+            // Fallback to clipboard conversion if direct HTML setting fails
+            try {
+              const delta = quillInstanceRef.current.clipboard.convert(value);
+              quillInstanceRef.current.setContents(delta, "silent");
+            } catch (deltaError) {
+              // Final fallback - set as plain text
+              quillInstanceRef.current.setText(value);
+            }
+          }
         }
 
         // Listen for changes
@@ -107,9 +118,22 @@ const QuilEditor = ({
   useEffect(() => {
     if (quillInstanceRef.current && value !== undefined) {
       const currentContent = quillInstanceRef.current.root.innerHTML;
-      if (currentContent !== value && value !== (currentContent === "<p><br></p>" ? "" : currentContent)) {
-        const delta = quillInstanceRef.current.clipboard.convert(value || "");
-        quillInstanceRef.current.setContents(delta, "silent");
+      const normalizedCurrent = currentContent === "<p><br></p>" ? "" : currentContent;
+      
+      if (normalizedCurrent !== value) {
+        try {
+          // Try to set HTML content directly first
+          quillInstanceRef.current.root.innerHTML = value || "<p><br></p>";
+        } catch (error) {
+          // Fallback to clipboard conversion if direct HTML setting fails
+          try {
+            const delta = quillInstanceRef.current.clipboard.convert(value || "");
+            quillInstanceRef.current.setContents(delta, "silent");
+          } catch (deltaError) {
+            // Final fallback - set as plain text
+            quillInstanceRef.current.setText(value || "");
+          }
+        }
       }
     }
   }, [value]);

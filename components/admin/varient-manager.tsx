@@ -760,8 +760,8 @@ export function VariantManager({
                 <div className="text-2xl font-bold text-orange-600">
                   {variants.length > 0 && (
                     <>
-                      ${Math.min(...variants.map((v) => v.price)).toFixed(2)} -
-                      ${Math.max(...variants.map((v) => v.price)).toFixed(2)}
+                      Rs {Math.min(...variants.map((v) => v.price)).toFixed(2)} -
+                      Rs {Math.max(...variants.map((v) => v.price)).toFixed(2)}
                     </>
                   )}
                 </div>

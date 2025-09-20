@@ -1,79 +1,90 @@
-import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "../../auth/[...nextauth]/route"
-import dbConnect from "@/lib/db-connect"
-import Order from "@/models/order"
-import User from "@/models/user"
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../auth/[...nextauth]/route";
+import {
+  getDashboardStats,
+  getSalesAnalytics,
+  getProductAnalytics,
+  getCustomerAnalytics,
+  getRecentActivity,
+  getPerformanceMetrics,
+} from "@/_actions/_analytics";
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions);
 
     // Check if user is admin
     if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url)
-    const detailed = searchParams.get("detailed") === "true"
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type") || "dashboard";
+    const period = searchParams.get("period") as "7d" | "30d" | "90d" | "1y" || "30d";
 
-    // Connect to database
-    await dbConnect()
+    let result;
 
-    // Get current date
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth()
+    switch (type) {
+      case "dashboard":
+        result = await getDashboardStats();
+        break;
+      case "sales":
+        result = await getSalesAnalytics(period);
+        break;
+      case "products":
+        result = await getProductAnalytics();
+        break;
+      case "customers":
+        result = await getCustomerAnalytics();
+        break;
+      case "activity":
+        result = await getRecentActivity();
+        break;
+      case "performance":
+        result = await getPerformanceMetrics();
+        break;
+      case "all":
+        // Get all analytics data for comprehensive dashboard
+        const [dashboard, sales, products, customers, activity, performance] = await Promise.all([
+          getDashboardStats(),
+          getSalesAnalytics(period),
+          getProductAnalytics(),
+          getCustomerAnalytics(),
+          getRecentActivity(),
+          getPerformanceMetrics(),
+        ]);
 
-    // Create data for the last 6 months
-    const data = []
-    for (let i = 5; i >= 0; i--) {
-      const month = new Date(currentYear, currentMonth - i, 1)
-      const monthEnd = new Date(currentYear, currentMonth - i + 1, 0)
+        if (!dashboard.success || !sales.success || !products.success || 
+            !customers.success || !activity.success || !performance.success) {
+          return NextResponse.json(
+            { error: "Failed to fetch some analytics data" },
+            { status: 500 }
+          );
+        }
 
-      const monthName = month.toLocaleString("default", { month: "short" })
-
-      // Get revenue for this month
-      const revenueResult = await Order.aggregate([
-        {
-          $match: {
-            status: { $ne: "cancelled" },
-            createdAt: { $gte: month, $lte: monthEnd },
-          },
-        },
-        { $group: { _id: null, total: { $sum: "$total" } } },
-      ])
-      const revenue = revenueResult.length > 0 ? revenueResult[0].total : 0
-
-      if (detailed) {
-        // Get order count for this month
-        const orderCount = await Order.countDocuments({
-          createdAt: { $gte: month, $lte: monthEnd },
-        })
-
-        // Get new customers for this month
-        const customerCount = await User.countDocuments({
-          role: "user",
-          createdAt: { $gte: month, $lte: monthEnd },
-        })
-
-        data.push({
-          name: monthName,
-          revenue: revenue,
-          orders: orderCount * 1000, // Scale for visualization
-          customers: customerCount * 2000, // Scale for visualization
-        })
-      } else {
-        data.push({
-          name: monthName,
-          total: revenue,
-        })
-      }
+        return NextResponse.json({
+          dashboard: dashboard.data,
+          sales: sales.data,
+          products: products.data,
+          customers: customers.data,
+          activity: activity.data,
+          performance: performance.data,
+        });
+      default:
+        return NextResponse.json({ error: "Invalid analytics type" }, { status: 400 });
     }
 
-    return NextResponse.json({ data })
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
+    }
+
+    return NextResponse.json(result.data);
   } catch (error) {
-    console.error("Error fetching analytics data:", error)
-    return NextResponse.json({ error: "Failed to fetch analytics data" }, { status: 500 })
+    console.error("Error fetching analytics data:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch analytics data" },
+      { status: 500 }
+    );
   }
 }

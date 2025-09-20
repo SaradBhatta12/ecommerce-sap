@@ -201,6 +201,7 @@ export function EnhancedProductForm({
       // Transform the data to match form expectations
       const transformedData = {
         ...initialData,
+        description: initialData.description || "",
         category: initialData.category?._id || initialData.category || "",
         brand: initialData.brand?._id || initialData.brand || "",
         price: Number(initialData.price) || 0,
@@ -400,14 +401,21 @@ export function EnhancedProductForm({
                         <Label htmlFor="description">Description *</Label>
                         <div className="relative">
                           {mounted ? (
-                            <QuilEditor
-                              value={form.watch("description") || ""}
-                              onChange={(value) => {
-                                form.setValue("description", value, { shouldValidate: true });
-                              }}
-                              theme={theme.theme}
-                              placeholder="Write a detailed product description. Include features, benefits, specifications, and any other relevant information that will help customers understand your product."
-                              className={form.formState.errors.description ? "border-red-500" : ""}
+                            <Controller
+                              name="description"
+                              control={form.control}
+                              render={({ field }) => (
+                                <QuilEditor
+                                  value={field.value || ""}
+                                  onChange={(value) => {
+                                    field.onChange(value);
+                                    form.setValue("description", value, { shouldValidate: true });
+                                  }}
+                                  theme={theme.theme}
+                                  placeholder="Write a detailed product description. Include features, benefits, specifications, and any other relevant information that will help customers understand your product."
+                                  className={form.formState.errors.description ? "border-red-500" : ""}
+                                />
+                              )}
                             />
                           ) : (
                             <div className="min-h-[200px] border rounded-md bg-muted/50 animate-pulse flex items-center justify-center">
@@ -430,7 +438,6 @@ export function EnhancedProductForm({
                         <div className="space-y-2">
                           <Label htmlFor="price">Base Price *</Label>
                           <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                             <Input
                               id="price"
                               type="number"
@@ -528,7 +535,7 @@ export function EnhancedProductForm({
                           render={({ field }) => (
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select category" />
@@ -561,7 +568,7 @@ export function EnhancedProductForm({
                           render={({ field }) => (
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select brand" />
@@ -586,7 +593,7 @@ export function EnhancedProductForm({
                           render={({ field }) => (
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <SelectTrigger>
                                 <SelectValue />
