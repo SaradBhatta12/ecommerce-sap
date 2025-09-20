@@ -76,6 +76,20 @@ interface CreateOrderResponse {
   paymentUrl?: string // For payment gateway integration
 }
 
+interface HomePageData {
+  featuredProducts: any[]
+  newProducts: any[]
+  saleProducts: any[]
+  categories: any[]
+  heroBannerProduct: any
+  brands: any[]
+  stats: {
+    totalProducts: number
+    totalCategories: number
+    totalBrands: number
+  }
+}
+
 const utilityApi = createApi({
   reducerPath: 'utilityApi',
   baseQuery: fetchBaseQuery({
