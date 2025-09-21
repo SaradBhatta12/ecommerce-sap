@@ -5,6 +5,8 @@ import dbConnect from '@/lib/db-connect';
 import Order from '@/models/order';
 import User from '@/models/user';
 import Discount from '@/models/discount';
+import { verifyEsewaPayment } from '@/lib/payment/esewa';
+import { verifyKhaltiPayment, isKhaltiPaymentSuccessful } from '@/lib/payment/khalti';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +31,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate payment details
+    if (!paymentDetails.transactionId || !paymentDetails.provider) {
+      return NextResponse.json(
+        { success: false, message: "Invalid payment details" },
+        { status: 400 }
+      );
+    }
+
     await dbConnect();
+
+    // Verify payment with the respective gateway before creating order
+    let paymentVerified = false;
+    let verificationError = null;
+
+    try {
+      if (paymentDetails.provider === 'esewa') {
+        // Verify eSewa payment
+        const verificationResult = await verifyEsewaPayment({
+          productCode: paymentDetails.transactionId,
+          transactionUuid: paymentDetails.transactionId,
+          totalAmount: parseFloat(paymentDetails.amount || orderData.total)
+        });
+        
+        paymentVerified = verificationResult.status === 'COMPLETE';
+        if (!paymentVerified) {
+          verificationError = `eSewa payment verification failed: ${verificationResult.status}`;
+        }
+      } else if (paymentDetails.provider === 'khalti') {
+        // Verify Khalti payment
+        const verificationResult = await verifyKhaltiPayment({
+          token: paymentDetails.transactionId,
+          amount: parseFloat(paymentDetails.amount || orderData.total)
+        });
+        
+        paymentVerified = isKhaltiPaymentSuccessful(verificationResult);
+        if (!paymentVerified) {
+          verificationError = `Khalti payment verification failed: ${verificationResult.state.name}`;
+        }
+      } else {
+        return NextResponse.json(
+          { success: false, message: "Unsupported payment provider" },
+          { status: 400 }
+        );
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      verificationError = `Payment verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+
+    // If payment verification failed, return error
+    if (!paymentVerified) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: verificationError || "Payment verification failed. Please contact support if amount was deducted." 
+        },
+        { status: 400 }
+      );
+    }
 
     // Verify user exists
     const user = await User.findById(session.user.id);
@@ -55,7 +115,7 @@ export async function POST(request: NextRequest) {
     // Generate order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
-    // Create order
+    // Create order only after successful payment verification
     const order = new Order({
       orderNumber,
       user: session.user.id,
@@ -87,14 +147,27 @@ export async function POST(request: NextRequest) {
       paymentDetails: {
         transactionId: paymentDetails.transactionId,
         provider: paymentDetails.provider,
-        amount: paymentDetails.amount,
+        amount: paymentDetails.amount || orderData.total,
         currency: 'NPR',
         status: 'completed',
+        verifiedAt: new Date(),
         metadata: {
           refId: paymentDetails.refId,
         },
       },
       status: 'processing',
+      timeline: [
+        {
+          status: 'Order Placed',
+          date: new Date(),
+          description: 'Order has been placed successfully.'
+        },
+        {
+          status: 'Payment Confirmed',
+          date: new Date(),
+          description: `Payment has been confirmed via ${paymentDetails.provider}.`
+        }
+      ]
     });
 
     await order.save();

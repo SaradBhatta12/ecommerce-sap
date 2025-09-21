@@ -6,6 +6,24 @@ export interface KhaltiPaymentParams {
   failureUrl: string
 }
 
+export interface KhaltiVerificationParams {
+  token: string
+  amount: number
+}
+
+export interface KhaltiVerificationResponse {
+  idx: string
+  token: string
+  amount: number
+  mobile: string
+  product_identity: string
+  product_name: string
+  state: {
+    idx: string
+    name: string
+  }
+}
+
 export function initiateKhaltiPayment({
   amount,
   productId,
@@ -55,6 +73,49 @@ export function initiateKhaltiPayment({
     const checkout = new window.KhaltiCheckout(config)
     checkout.show({ amount: amount * 100 }) // Amount in paisa
   }
+}
+
+/**
+ * Verify Khalti payment status
+ * Used to check transaction status after payment
+ */
+export async function verifyKhaltiPayment({
+  token,
+  amount
+}: KhaltiVerificationParams): Promise<KhaltiVerificationResponse> {
+  const verificationUrl = 'https://khalti.com/api/v2/payment/verify/';
+  const secretKey = process.env.KHALTI_SECRET_KEY || 'test_secret_key_f59e8b7d18b4499ca40f68195a846e9b';
+  
+  try {
+    const response = await fetch(verificationUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${secretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        amount: amount * 100 // Amount in paisa
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: KhaltiVerificationResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Khalti verification error:', error);
+    throw new Error('Failed to verify Khalti payment');
+  }
+}
+
+/**
+ * Check if Khalti payment was successful
+ */
+export function isKhaltiPaymentSuccessful(verificationResponse: KhaltiVerificationResponse): boolean {
+  return verificationResponse.state.name === 'Completed';
 }
 
 // Add Khalti type definition
