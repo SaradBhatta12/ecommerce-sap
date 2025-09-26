@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Product {
   _id: string;
@@ -35,6 +36,8 @@ interface NewThisWeekProps {
 }
 
 export default function NewThisWeek({ products = [], totalCount = 0 }: NewThisWeekProps) {
+  const { formatPrice } = useCurrency();
+  
   return (
     <section className="relative py-20 lg:py-32 bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-hidden fullscreen-container no-shadows no-rounded">
       {/* Background Elements */}
@@ -140,11 +143,11 @@ export default function NewThisWeek({ products = [], totalCount = 0 }: NewThisWe
                     <div className="flex items-center gap-2">
                       {product.onSale && product.salePrice ? (
                         <>
-                          <p className="text-black font-bold text-lg">${product.salePrice}</p>
-                          <p className="text-gray-500 line-through text-sm">${product.price}</p>
+                          <p className="text-black font-bold text-lg">{formatPrice(product.salePrice)}</p>
+                          <p className="text-gray-500 line-through text-sm">{formatPrice(product.price)}</p>
                         </>
                       ) : (
-                        <p className="text-black font-bold text-lg">${product.price}</p>
+                        <p className="text-black font-bold text-lg">{formatPrice(product.price)}</p>
                       )}
                     </div>
                   </div>

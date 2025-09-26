@@ -31,11 +31,13 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useGetUserOrdersQuery } from "@/store/api/userApi";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 
 export default function OrdersPage() {
   // Multi-tenant functionality removed - no domain parameter needed
   const { data: session, status } = useSession();
+  const { formatPrice } = useCurrency();
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -165,7 +167,7 @@ export default function OrdersPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="nepali-price">
-                      {order.total.toLocaleString()}
+                      {formatPrice(order.total)}
                     </TableCell>
                     <TableCell>{order.paymentMethod}</TableCell>
                     <TableCell className="text-right">

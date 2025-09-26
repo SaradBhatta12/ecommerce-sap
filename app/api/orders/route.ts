@@ -63,57 +63,69 @@ export async function POST(request: Request) {
     }
 
     // Create order
-    const order = await Order.create({
+    const order = new Order({
       user: session.user.id,
-      items: items?.map((item: any) => ({
+      items: orderData.items.map((item: any) => ({
         product: item.productId,
-        name: item.name,
+        name: item.name || 'Product',
         price: item.price,
         quantity: item.quantity,
-        image: item.image,
+        image: item.image || ''
       })),
-      address: {
-        fullName: address.fullName,
-        address: address.address,
-        city: address.district, // Map district to city
-        province: address.province,
-        postalCode: address.postalCode,
-        phone: address.phone,
-      },
-      paymentMethod,
-      subtotal,
-      shipping,
-      discount: discount
-        ? {
-            id: discount.id,
-            code: discount.code,
-            amount: discount.amount,
-          }
-        : undefined,
-      total,
+      address: orderData.shippingAddress,
+      paymentMethod: orderData.paymentMethod,
+      paymentStatus: orderData.paymentMethod === 'cod' ? 'pending' : 'paid',
+      status: 'pending',
+      subtotal: orderData.subtotal,
+      shipping: orderData.shipping,
+      discount: orderData.discount ? {
+        id: orderData.discount.id,
+        code: orderData.discount.code,
+        amount: orderData.discount.amount
+      } : undefined,
+      total: orderData.total,
     });
 
-    // Update product stock and discount usage
+    // Update product stock
     for (const item of items) {
-      await Product.findByIdAndUpdate(item.id, {
+      await Product.findByIdAndUpdate(item.productId, {
         $inc: { stock: -item.quantity },
       });
     }
 
-    // If discount was applied, increment usage count
-    if (discount && discount.id) {
-      await Discount.findByIdAndUpdate(discount.id, {
-        $inc: { usageCount: 1 },
-      });
+    // Save the order
+    await order.save();
+
+    // Update discount usage count if discount was applied
+    if (orderData.discount) {
+      await Discount.findByIdAndUpdate(
+        orderData.discount.id,
+        { $inc: { usageCount: 1 } }
+      );
     }
 
-    return NextResponse.json(
-      {
-        message: "Order created successfully",
-        order,
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: "Order created successfully",
+      orderId: order._id,
+      orderNumber: order._id,
+      status: order.status,
+      total: order.total,
+      order: {
+        _id: order._id,
+        user: order.user,
+        items: order.items,
+        address: order.address,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        status: order.status,
+        subtotal: order.subtotal,
+        shipping: order.shipping,
+        discount: order.discount,
+        total: order.total,
+        createdAt: order.createdAt
+      }
+    });
   } catch (error) {
     console.error("Error creating order:", error);
     return NextResponse.json(

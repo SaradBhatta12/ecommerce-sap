@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { addToCart } from "@/store/slices/cartSlice";
 import { addToWishlist, removeFromWishlist } from "@/store/slices/wishlistSlice";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatPrice } from "@/lib/utils";
 
 interface Product {
   _id: string;
@@ -64,6 +66,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { formatPrice } = useCurrency();
   const dispatch = useAppDispatch();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -308,11 +311,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-gray-900">
-                ₹{displayPrice.toLocaleString()}
+                {formatPrice(displayPrice)}
               </span>
               {originalPrice && originalPrice !== displayPrice && (
                 <span className="text-sm text-gray-500 line-through">
-                  ₹{originalPrice.toLocaleString()}
+                  {formatPrice(originalPrice)}
                 </span>
               )}
             </div>

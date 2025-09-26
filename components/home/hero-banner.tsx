@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Star, TrendingUp } from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatPrice } from "@/lib/utils";
 
 interface HeroBannerProps {
   product?: {
@@ -33,6 +35,8 @@ interface HeroBannerProps {
 }
 
 export default function HeroBanner({ product, stats }: HeroBannerProps) {
+  const { formatPrice } = useCurrency();
+  
   return (
     <section className="bg-gray-50 min-h-screen flex items-center">
       <div className="w-full">
@@ -68,11 +72,11 @@ export default function HeroBanner({ product, stats }: HeroBannerProps) {
                       </p>
                       <div className="flex items-center gap-4">
                         <span className="text-2xl lg:text-3xl font-bold text-black">
-                          ${product.discountPrice || product.price}
+                          {formatPrice(product.discountPrice || product.price)}
                         </span>
                         {product.discountPrice && (
                           <span className="text-lg lg:text-xl text-gray-500 line-through">
-                            ${product.price}
+                            {formatPrice(product.price)}
                           </span>
                         )}
                       </div>

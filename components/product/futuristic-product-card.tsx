@@ -9,6 +9,8 @@ import { HolographicCard } from "@/components/ui/holographic-card"
 import { Button } from "@/components/ui/button"
 import { addToWishlist, removeFromWishlist } from "@/lib/api-endpoints"
 import { toast } from "sonner"
+import { useCurrency } from "@/contexts/CurrencyContext"
+import { formatPrice } from "@/lib/utils"
 // Store functionality removed
 
 interface Product {
@@ -30,6 +32,7 @@ interface FuturisticProductCardProps {
 }
 
 export function FuturisticProductCard({ product, inWishlist = false }: FuturisticProductCardProps) {
+  const { formatPrice } = useCurrency()
   const [isWishlisted, setIsWishlisted] = useState(inWishlist)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [showQuickView, setShowQuickView] = useState(false)
@@ -142,11 +145,11 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
           <div className="flex items-baseline mt-1 space-x-2">
             {product.discountPrice ? (
               <>
-                <span className="text-xl font-bold text-white">${product.discountPrice.toFixed(2)}</span>
-                <span className="text-sm text-gray-400 line-through">${product.price.toFixed(2)}</span>
+                <span className="text-xl font-bold text-white">{formatPrice(product.discountPrice)}</span>
+                <span className="text-sm text-gray-400 line-through">{formatPrice(product.price)}</span>
               </>
             ) : (
-              <span className="text-xl font-bold text-white">${product.price.toFixed(2)}</span>
+              <span className="text-xl font-bold text-white">{formatPrice(product.price)}</span>
             )}
           </div>
 

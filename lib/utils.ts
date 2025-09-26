@@ -17,7 +17,18 @@ export function slugify(text: string): string {
 }
 
 export function formatPrice(price: number): string {
-  return `रू ${price.toLocaleString("en-IN")}`;
+  // Handle null, undefined, or invalid numbers
+  if (typeof price !== 'number' || isNaN(price) || price === null || price === undefined) {
+    return "0.00";
+  }
+  
+  // Ensure price is a valid number and round to 2 decimal places
+  const validPrice = Math.round(price * 100) / 100;
+  
+  return validPrice.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 }
 
 export function formatDate(date: string | Date): string {
@@ -45,7 +56,22 @@ export function calculateDiscountPercentage(
   originalPrice: number,
   discountedPrice: number
 ): number {
-  return Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
+  // Validate inputs
+  if (typeof originalPrice !== 'number' || isNaN(originalPrice) || originalPrice <= 0) {
+    return 0;
+  }
+  
+  if (typeof discountedPrice !== 'number' || isNaN(discountedPrice) || discountedPrice < 0) {
+    return 0;
+  }
+  
+  // Ensure discounted price is not greater than original price
+  if (discountedPrice >= originalPrice) {
+    return 0;
+  }
+  
+  const percentage = ((originalPrice - discountedPrice) / originalPrice) * 100;
+  return Math.round(percentage * 100) / 100; // Round to 2 decimal places
 }
 
 export function getRandomColor(): string {

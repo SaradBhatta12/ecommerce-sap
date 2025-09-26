@@ -93,11 +93,20 @@ export const cartSlice = createSlice({
       state.isOpen = false
     },
     calculateTotals: (state) => {
-      state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0)
-      state.totalAmount = state.items.reduce(
-        (total, item) => total + (item.price * item.quantity),
-        0
-      )
+      // Calculate total items with validation
+      state.totalItems = state.items.reduce((total, item) => {
+        const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0 ? item.quantity : 0;
+        return total + itemQuantity;
+      }, 0);
+      
+      // Calculate total amount with validation and proper rounding
+      state.totalAmount = Math.round(
+        state.items.reduce((total, item) => {
+          const itemPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+          const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0 ? item.quantity : 0;
+          return total + (itemPrice * itemQuantity);
+        }, 0) * 100
+      ) / 100;
     },
   },
 })

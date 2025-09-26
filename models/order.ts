@@ -27,6 +27,7 @@ export interface IOrder extends Document {
     amount?: number;
     currency?: string;
     status?: string;
+    referenceId?: string;
     metadata?: any;
   };
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
@@ -115,6 +116,7 @@ const orderSchema = new Schema<IOrder>(
       amount: Number,
       currency: String,
       status: String,
+      referenceId: String,
       metadata: Schema.Types.Mixed,
     },
     status: {

@@ -29,6 +29,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { addToCart, selectCartItemById, openCart, addToWishlistAction, removeFromWishlistAction, selectIsInWishlist, setWishlistLoading } from "@/store";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Variant {
   sku_from_system: string;
@@ -90,6 +91,7 @@ interface Product {
 export default function ProductPage() {
   const dispatch = useDispatch();
   const { data: session } = useSession();
+  const { formatPrice } = useCurrency();
   const { id } = useParams() as { id: string };
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
@@ -184,10 +186,16 @@ export default function ProductPage() {
   const getDiscountPercentage = () => {
     const original = getOriginalPrice();
     const current = getCurrentPrice();
-    if (original && current && original > current) {
-      return Math.round(((original - current) / original) * 100);
+
+    // Validate inputs
+    if (!original || !current || typeof original !== 'number' || typeof current !== 'number' ||
+      isNaN(original) || isNaN(current) || original <= 0 || current < 0 || current >= original) {
+      return 0;
     }
-    return 0;
+
+    // Calculate and round to 2 decimal places
+    const percentage = ((original - current) / original) * 100;
+    return Math.round(percentage * 100) / 100;
   };
 
   const handleAddToCart = async () => {
@@ -343,8 +351,8 @@ export default function ProductPage() {
                   key={index}
                   onClick={() => setSelectedImage(image)}
                   className={`relative overflow-hidden rounded-md border-2 transition-all hover:scale-105 ${selectedImage === image
-                      ? "border-primary"
-                      : "border-border hover:border-primary/50"
+                    ? "border-primary"
+                    : "border-border hover:border-primary/50"
                     }`}
                 >
                   <Image
@@ -397,8 +405,8 @@ export default function ProductPage() {
                     <Star
                       key={i}
                       className={`h-4 w-4 ${i < 4
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-muted-foreground"
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-muted-foreground"
                         }`}
                     />
                   ))}
@@ -414,11 +422,11 @@ export default function ProductPage() {
               {/* Price */}
               <div className="flex items-center space-x-3">
                 <span className="text-3xl font-bold text-primary">
-                  ₹{getCurrentPrice().toLocaleString()}
+                  {getCurrentPrice() !== null ? formatPrice(getCurrentPrice()!) : null}
                 </span>
                 {getOriginalPrice() && (
                   <span className="text-lg text-muted-foreground line-through">
-                    ₹{getOriginalPrice()?.toLocaleString()}
+                    {getOriginalPrice() !== null ? formatPrice(getOriginalPrice()!) : null}
                   </span>
                 )}
                 {getDiscountPercentage() > 0 && (
@@ -465,9 +473,9 @@ export default function ProductPage() {
                     <Card
                       key={index}
                       className={`cursor-pointer transition-all hover:shadow-md ${selectedVariant?.sku_from_system ===
-                          variant.sku_from_system
-                          ? "ring-2 ring-primary border-primary"
-                          : "hover:border-primary/50"
+                        variant.sku_from_system
+                        ? "ring-2 ring-primary border-primary"
+                        : "hover:border-primary/50"
                         }`}
                       onClick={() => handleVariantSelect(variant)}
                     >
@@ -591,7 +599,7 @@ export default function ProductPage() {
                     isAddingToCart ||
                     (selectedVariant &&
                       (!selectedVariant.is_available ||
-                        selectedVariant.inventory === 0)) 
+                        selectedVariant.inventory === 0))
                   }
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
@@ -619,7 +627,7 @@ export default function ProductPage() {
                   <Truck className="h-5 w-5 mx-auto mb-1 text-primary" />
                   <p className="text-xs font-medium">Free Shipping</p>
                   <p className="text-xs text-muted-foreground">
-                    On orders over ₹999
+                    On orders over {formatPrice(999)}
                   </p>
                 </div>
                 <div className="text-center">
@@ -669,7 +677,7 @@ export default function ProductPage() {
                                 {opt}
                                 {option.priceModifiers[opt] && (
                                   <span className="ml-1 text-xs text-green-600">
-                                    (+₹{option.priceModifiers[opt]})
+                                    (+{formatPrice(option.priceModifiers[opt])})
                                   </span>
                                 )}
                               </Badge>
@@ -741,7 +749,7 @@ export default function ProductPage() {
                                 {sub.interval} Plan
                               </h4>
                               <p className="text-sm text-muted-foreground">
-                                ₹{sub.price.toLocaleString()} per {sub.interval}
+                                {formatPrice(sub.price)} per {sub.interval}
                               </p>
                             </div>
                             {sub.discountPercentage && (

@@ -72,6 +72,7 @@ interface Customer {
   lastOrderDate?: string;
 }
 import { formatNPR } from "@/lib/currency";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Order {
   _id: string;
@@ -118,6 +119,7 @@ export default function CustomerDetailsModal({
     hasNextPage: false,
     hasPrevPage: false,
   });
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     if (customer && isOpen) {
@@ -174,10 +176,7 @@ export default function CustomerDetailsModal({
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return formatPrice(amount);
   };
 
   if (!customer) return null;
@@ -278,7 +277,7 @@ export default function CustomerDetailsModal({
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <DollarSign className="h-5 w-5 text-green-600" />
                     </div>
-                    <p className="text-2xl font-bold">{formatNPR(customer?.totalSpent as any)}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(customer?.totalSpent as any)}</p>
                     <p className="text-sm text-muted-foreground">Total Spent</p>
                   </div>
                 </div>

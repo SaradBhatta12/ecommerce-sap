@@ -32,13 +32,12 @@ export async function GET(request: NextRequest) {
     });
 
     if (isEsewaPaymentSuccessful(verificationResponse)) {
-      // Payment successful - create order and redirect to success page
-      const successUrl = new URL('/checkout/success', request.url);
+      // Payment successful - redirect back to checkout with payment details
+      const successUrl = new URL('/checkout', request.url);
       successUrl.searchParams.set('payment_method', 'esewa');
-      successUrl.searchParams.set('transaction_id', transactionUuid);
-      successUrl.searchParams.set('ref_id', verificationResponse.ref_id || '');
-      successUrl.searchParams.set('amount', totalAmount);
-      successUrl.searchParams.set('create_order', 'true');
+      successUrl.searchParams.set('oid', transactionUuid);
+      successUrl.searchParams.set('refId', verificationResponse.ref_id || '');
+      successUrl.searchParams.set('amt', totalAmount);
       
       return NextResponse.redirect(successUrl);
     } else {

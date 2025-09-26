@@ -38,6 +38,7 @@ import {
   useApplyDiscountMutation
 } from "@/store";
 import type { RootState } from "@/store";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface CartItem {
   id: string;
@@ -72,6 +73,7 @@ interface OrderDetails {
   status: string;
   paymentStatus: string;
   total: number;
+  referenceId?: string;
 }
 
 export default function CheckoutPage() {
@@ -81,8 +83,9 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
   const cartItems = useSelector((state: RootState) => state?.cart?.items) as CartItem[];
+  const { formatPrice } = useCurrency();
   
-  // RTK Query hooks
+  // API hooks
   const { data: addressesData, isLoading: addressesLoading, refetch: refetchAddresses } = useGetUserAddressesQuery(undefined, {
     skip: status !== "authenticated"
   });
@@ -90,7 +93,7 @@ export default function CheckoutPage() {
   const [validateDiscount, { isLoading: isValidatingDiscount }] = useValidateDiscountMutation();
   const [applyDiscount] = useApplyDiscountMutation();
   
-  // Local state
+  // State
   const [selectedAddress, setSelectedAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("esewa");
   const [discountCode, setDiscountCode] = useState("");
@@ -102,26 +105,40 @@ export default function CheckoutPage() {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  
+
   const addresses = (addressesData as any)?.addresses || [];
-  // Calculate totals
+  
+  // Calculate subtotal with proper validation
   const subtotal = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total, item) => {
+      // Validate item properties
+      const itemPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+      const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0 ? item.quantity : 0;
+      return total + (itemPrice * itemQuantity);
+    },
     0
   );
-  const shipping = 100; // Fixed shipping cost
-  const discountAmount = discount ? discount.discountAmount : 0;
-  const total = subtotal + shipping - discountAmount;
+  
+  // Fixed shipping cost with validation
+  const shipping = 100;
+  
+  // Calculate discount amount with validation
+  const discountAmount = discount && typeof discount.discountAmount === 'number' && !isNaN(discount.discountAmount) 
+    ? Math.max(0, discount.discountAmount) 
+    : 0;
+  
+  // Calculate total with proper rounding
+  const total = Math.round((subtotal + shipping - discountAmount) * 100) / 100;
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth?callbackUrl=/checkout");
+      router.push("/auth/signin");
     } else if (status === "authenticated" && cartItems.length === 0) {
-      router.push("/cart");
+      router.push("/");
     }
   }, [status, cartItems.length, router]);
 
-  // Set default address when addresses are loaded
+  // Auto-select default address
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
       const defaultAddress = addresses.find((addr: Address) => addr.isDefault);
@@ -136,33 +153,35 @@ export default function CheckoutPage() {
   // Handle payment response from URL parameters
   useEffect(() => {
     const handlePaymentResponse = async () => {
-      const paymentMethodParam = searchParams.get('payment_method');
-      const transactionId = searchParams.get('transaction_id');
-      const refId = searchParams.get('ref_id');
-      const amount = searchParams.get('amount');
+      // Check for eSewa data parameter (base64 encoded)
+      const esewaData = searchParams.get('data');
+      const transactionUuid = searchParams.get('transaction_uuid');
       const oid = searchParams.get('oid');
       const pidx = searchParams.get('pidx');
+      const refId = searchParams.get('refId');
+      const amt = searchParams.get('amt');
       const error = searchParams.get('error');
-
-      // Handle payment errors first
+      
+      // Check if there are payment-related parameters
+      const hasPaymentDetails = esewaData || transactionUuid || oid || pidx || refId || amt || error;
+      
       if (error) {
-        let errorMessage = 'Payment failed. Please try again.';
-        
+        let errorMessage = "Payment was canceled or failed. Please try again.";
         switch (error) {
-          case 'payment_cancelled':
-            errorMessage = 'Payment was cancelled. You can try again when ready.';
+          case 'user_canceled':
+            errorMessage = "Payment was canceled by user. Please try again.";
+            break;
+          case 'timeout':
+            errorMessage = "Payment timed out. Please try again.";
+            break;
+          case 'invalid_amount':
+            errorMessage = "Invalid payment amount. Please refresh and try again.";
             break;
           case 'payment_failed':
-            errorMessage = 'Payment failed. Please check your payment details and try again.';
-            break;
-          case 'verification_failed':
-            errorMessage = 'Payment verification failed. Please contact support if amount was deducted.';
-            break;
-          case 'system_error':
-            errorMessage = 'System error occurred. Please try again or contact support.';
+            errorMessage = "Payment processing failed. Please try again.";
             break;
           default:
-            errorMessage = searchParams.get('message') || errorMessage;
+            errorMessage = `Payment failed: ${error}`;
         }
         
         setPaymentError(errorMessage);
@@ -170,73 +189,86 @@ export default function CheckoutPage() {
         window.history.replaceState({}, document.title, window.location.pathname);
         return;
       }
-
-      // Check if we have payment response parameters
-      const hasPaymentDetails = transactionId || oid || pidx;
       
+      // If no payment details, don't process
       if (!hasPaymentDetails) {
         return;
       }
-
+      
+      // Set processing state
       setIsProcessingPayment(true);
-      setPaymentError(null);
-
+      
       try {
         // Get order data from session storage
         const orderDataStr = sessionStorage.getItem('orderData');
         if (!orderDataStr) {
-          throw new Error('Order data not found in session storage');
+          throw new Error('Order data not found. Please try placing the order again.');
         }
-
+        
         const orderData = JSON.parse(orderDataStr);
-
+        
         // Validate order data
         if (!orderData.items || orderData.items.length === 0) {
-          throw new Error('Invalid order data: no items found');
+          throw new Error('Invalid order data. Please try again.');
         }
-
+        
         if (!orderData.total || orderData.total <= 0) {
-          throw new Error('Invalid order data: invalid total amount');
+          throw new Error('Invalid order total. Please try again.');
         }
-
-        // Prepare payment details based on the payment method
+        
+        // Prepare payment details based on payment method
         let paymentDetails;
-        if (oid) {
-          // eSewa payment
+        
+        if (esewaData) {
+          // eSewa payment with base64 encoded data
+          try {
+            const decodedData = JSON.parse(atob(esewaData));
+            paymentDetails = {
+              transactionId: decodedData.transaction_uuid || transactionUuid,
+              provider: 'esewa',
+              amount: parseFloat(decodedData.total_amount || amt || '0'),
+              refId: decodedData.transaction_code || decodedData.transaction_uuid
+            };
+          } catch (decodeError) {
+            console.error('Failed to decode eSewa data:', decodeError);
+            throw new Error('Invalid eSewa payment data');
+          }
+        } else if (oid) {
+          // eSewa payment (legacy format)
           paymentDetails = {
             transactionId: oid,
             provider: 'esewa',
-            amount: searchParams.get('amt'),
-            refId: searchParams.get('refId'),
+            amount: parseFloat(amt || '0'),
+            refId: refId
           };
         } else if (pidx) {
           // Khalti payment
           paymentDetails = {
             transactionId: pidx,
             provider: 'khalti',
-            amount: searchParams.get('amount'),
-            refId: searchParams.get('ref_id'),
+            amount: parseFloat(amt || '0'),
+            refId: refId
           };
         } else {
-          // Fallback to existing method
+          // Fallback
           paymentDetails = {
-            transactionId: transactionId || '',
-            provider: paymentMethodParam || '',
-            amount: parseFloat(amount || '0'),
-            refId: refId || '',
+            transactionId: transactionUuid || refId || 'unknown',
+            provider: 'unknown',
+            amount: parseFloat(amt || '0'),
+            refId: refId || transactionUuid
           };
         }
-
+        
         // Validate payment details
         if (!paymentDetails.transactionId) {
-          throw new Error('Invalid payment response: missing transaction ID');
+          throw new Error('Missing transaction ID. Payment verification failed.');
         }
-
-        if (!paymentDetails.provider) {
-          throw new Error('Invalid payment response: missing payment provider');
+        
+        if (!paymentDetails.provider || paymentDetails.provider === 'unknown') {
+          throw new Error('Unknown payment provider. Payment verification failed.');
         }
-
-        // Create order via API
+        
+        // Complete the order
         const response = await fetch('/api/payment/complete', {
           method: 'POST',
           headers: {
@@ -244,46 +276,52 @@ export default function CheckoutPage() {
           },
           body: JSON.stringify({
             orderData,
-            paymentDetails,
+            paymentDetails
           }),
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error: ${response.status} - ${errorText}`);
+          const errorData = await response.json().catch(() => ({ message: 'Server error' }));
+          throw new Error(errorData.message || `Server error: ${response.status}`);
         }
 
         const result = await response.json();
 
         if (result.success) {
-          setOrderDetails(result.order);
+          // Set order details for success modal
+          setOrderDetails({
+            id: result.orderId || result.order?.id,
+            orderNumber: result.orderNumber || result.order?.orderNumber,
+            status: result.status || result.order?.status || 'confirmed',
+            paymentStatus: result.paymentStatus || result.order?.paymentStatus || 'completed',
+            total: result.total || result.order?.total,
+            referenceId: paymentDetails.refId
+          });
           setShowSuccessModal(true);
-          // Clear cart only after successful order creation
           dispatch(clearCart());
-          // Clear session storage after successful order creation
           sessionStorage.removeItem('orderData');
           // Clear URL parameters
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
-          throw new Error(result.message || 'Failed to create order');
+          throw new Error(result.message || 'Order creation failed');
         }
       } catch (err) {
-        console.error('Error creating order:', err);
+        console.error('Payment processing error:', err);
         
-        // Provide specific error messages
-        let errorMessage = 'Failed to create order';
+        // Set appropriate error message
+        let errorMessage = "Failed to process payment. Please contact support.";
         
         if (err instanceof Error) {
           if (err.message.includes('network') || err.message.includes('fetch')) {
-            errorMessage = 'Network error. Please check your connection and try again.';
+            errorMessage = "Network error. Please check your connection and try again.";
           } else if (err.message.includes('session') || err.message.includes('auth')) {
-            errorMessage = 'Session expired. Please refresh the page and try again.';
+            errorMessage = "Session expired. Please refresh the page and try again.";
           } else if (err.message.includes('Order data not found')) {
-            errorMessage = 'Order data expired. Please try placing your order again.';
+            errorMessage = "Order session expired. Please try placing the order again.";
           } else if (err.message.includes('Server error: 5')) {
-            errorMessage = 'Server error occurred. Please try again in a few minutes.';
+            errorMessage = "Server error. Please try again or contact support.";
           } else if (err.message.includes('Server error: 4')) {
-            errorMessage = 'Invalid request. Please try placing your order again.';
+            errorMessage = "Invalid request. Please refresh the page and try again.";
           } else {
             errorMessage = err.message;
           }
@@ -299,11 +337,10 @@ export default function CheckoutPage() {
   }, [searchParams, dispatch]);
 
   const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) return;
-
+    setDiscountError("");
+    
     try {
-      setDiscountError("");
-      
+      // Validate discount code
       const result = await validateDiscount({
         code: discountCode,
         cartTotal: subtotal,
@@ -322,17 +359,17 @@ export default function CheckoutPage() {
           value: result.discount.value,
           discountAmount: result.discount.discountAmount
         });
-        toast.success("Discount applied successfully!");
+        
+        toast.success(`Discount applied: ${result.discount.code}`);
         setDiscountCode("");
-        setDiscountError("");
       } else {
-        setDiscountError(result.message || "Invalid discount code");
-        setDiscount(null);
+        setDiscountError("Invalid or expired discount code");
+        toast.error("Invalid or expired discount code");
       }
     } catch (error: any) {
-      console.error("Error applying discount:", error);
-      setDiscountError(error?.data?.error || "Failed to apply discount. Please try again.");
-      setDiscount(null);
+      const errorMessage = error?.data?.message || "Failed to apply discount";
+      setDiscountError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -358,84 +395,77 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Validate cart items have required fields
-    const invalidItems = cartItems.filter(item => !item.id || !item.name || !item.price || item.quantity <= 0);
+    // Validate cart items
+    const invalidItems = cartItems.filter(item => !item.id || !item.name || item.price <= 0 || item.quantity <= 0);
     if (invalidItems.length > 0) {
       toast.error("Some items in your cart are invalid. Please refresh and try again.");
       return;
     }
 
-    // Validate total amount
+    // Validate total
     if (total <= 0) {
       toast.error("Invalid order total. Please refresh and try again.");
       return;
     }
 
     try {
-      // Prepare order data for all payment methods
+      // Prepare order data
       const orderData = {
         addressId: selectedAddress,
         paymentMethod,
         items: cartItems.map((item) => ({
           productId: item.id,
-          name: item.name,
           quantity: item.quantity,
-          price: item.price,
-          image: item.image
+          price: item.price
         })),
         subtotal,
         shipping,
+        total,
         discount: discount
           ? {
-            id: discount._id,
-            code: discount.code,
-            amount: discount.discountAmount,
-          }
-          : undefined,
-        total,
+              id: discount._id,
+              code: discount.code,
+              amount: discount.discountAmount
+            }
+          : undefined
       };
 
-      // For COD, create order directly since no payment verification is needed
+      // For COD orders, create order immediately
       if (paymentMethod === "cod") {
         const orderResult = await createOrder(orderData).unwrap();
-
-        // Apply discount if used
+        
+        // Apply discount if present
         if (discount) {
           try {
             await applyDiscount({
-              discountId: discount._id,
+              discountId: discount._id
             }).unwrap();
           } catch (discountError) {
-            console.warn("Failed to apply discount usage:", discountError);
+            console.warn("Failed to apply discount:", discountError);
           }
         }
-
+        
         // Show success modal
         setOrderDetails({
           id: orderResult.orderId,
           orderNumber: orderResult.orderNumber || `ORD-${orderResult.orderId}`,
           status: 'confirmed',
-          paymentStatus: 'paid',
+          paymentStatus: 'pending',
           total: total
         });
         setShowSuccessModal(true);
-        
-        // Clear cart only after successful order creation
         dispatch(clearCart());
-        toast.success("Order placed successfully!");
         return;
       }
 
-      // For online payments (eSewa, Khalti), store order data and initiate payment
-      // Order will be created only after successful payment verification
+      // For online payments, store order data and initiate payment
       sessionStorage.setItem('orderData', JSON.stringify(orderData));
       
-      // Initiate payment through PaymentMethods component
+      // Initiate payment
       try {
-        // Check if payment initiation function is available
+        toast.success("Redirecting to payment gateway...");
         if (typeof (window as any).initiatePayment === 'function') {
-          // Call the payment initiation function
-          (window as any).initiatePayment(paymentMethod);
+          (window as any).initiatePayment(paymentMethod, total, orderData);
           toast.success("Redirecting to payment gateway...");
         } else {
           throw new Error("Payment system not ready");
@@ -473,7 +503,30 @@ export default function CheckoutPage() {
   };
 
   const handlePaymentInitiation = () => {
-    if (paymentMethod === "esewa" || paymentMethod === "khalti") {
+    if (paymentMethod === "esewa") {
+      // Import and call eSewa payment function directly
+      import('@/lib/payment/esewa').then(({ initiateEsewaPayment }) => {
+        const orderData = JSON.parse(sessionStorage.getItem('orderData') || '{}');
+        initiateEsewaPayment({
+          amount: total,
+          orderData
+        });
+      });
+    } else if (paymentMethod === "khalti") {
+      // Import and call Khalti payment function directly
+      import('@/lib/payment/khalti').then(({ initiateKhaltiPayment }) => {
+        const orderData = JSON.parse(sessionStorage.getItem('orderData') || '{}');
+        const orderId = `ORDER_${Date.now()}`;
+        
+        initiateKhaltiPayment({
+          amount: total,
+          productId: orderId,
+          productName: `Order Payment`,
+          successUrl: `${window.location.origin}/api/payment/khalti/success`,
+          failureUrl: `${window.location.origin}/api/payment/khalti/failure`,
+        });
+      });
+    } else {
       handleCheckout();
     }
   };
@@ -548,7 +601,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className=" mx-auto py-8">
+    <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -623,7 +676,7 @@ export default function CheckoutPage() {
                 selectedMethod={paymentMethod}
                 onPaymentMethodChange={(method) => setPaymentMethod(method)}
                 onPaymentComplete={(transactionId) => {
-                  // Handle payment completion
+                  console.log("Payment completed:", transactionId);
                 }}
                 amount={total}
                 onPaymentInitiation={handlePaymentInitiation}
@@ -632,6 +685,7 @@ export default function CheckoutPage() {
           </Card>
         </div>
 
+        {/* Order Summary */}
         <div>
           <Card className="sticky top-6">
             <CardHeader>
@@ -650,7 +704,7 @@ export default function CheckoutPage() {
                         {item.name} x {item.quantity}
                       </span>
                       <span>
-                        Rs. {(item.price * item.quantity).toLocaleString()}
+                        {formatPrice(item.price * item.quantity)}
                       </span>
                     </div>
                   ))}
@@ -704,23 +758,23 @@ export default function CheckoutPage() {
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>Rs. {subtotal.toLocaleString()}</span>
+                  <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
-                  <span>Rs. {shipping.toLocaleString()}</span>
+                  <span>{formatPrice(shipping)}</span>
                 </div>
                 {discount && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Discount</span>
                     <span>
-                      - Rs. {discount?.discountAmount?.toLocaleString()}
+                      - {formatPrice(discount?.discountAmount || 0)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between font-medium pt-2">
                   <span>Total</span>
-                  <span>Rs. {total.toLocaleString()}</span>
+                  <span>{formatPrice(total)}</span>
                 </div>
               </div>
             </CardContent>
@@ -728,7 +782,7 @@ export default function CheckoutPage() {
               <Button
                 size="lg"
                 className="w-full"
-                onClick={handleCheckout}
+                onClick={paymentMethod === "cod" ? handleCheckout : handlePaymentInitiation}
                 disabled={
                   isCreatingOrder || addresses.length === 0 || !paymentMethod
                 }
@@ -798,17 +852,20 @@ export default function CheckoutPage() {
                     <div className="h-5 w-5 bg-green-500 rounded-full"></div>
                     <div>
                       <p className="text-sm text-gray-500">Total Amount</p>
-                      <p className="font-semibold">Rs. {orderDetails.total.toLocaleString()}</p>
+                      <p className="font-semibold">{formatPrice(orderDetails.total)}</p>
                     </div>
                   </div>
-                </div>
 
-                {searchParams.get('ref_id') && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-500 mb-1">Reference ID</p>
-                    <p className="font-mono text-sm">{searchParams.get('ref_id')}</p>
-                  </div>
-                )}
+                  {orderDetails?.referenceId && (
+                    <div className="flex items-center space-x-3">
+                      <div className="h-5 w-5 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="text-sm text-gray-500">Reference ID</p>
+                        <p className="font-mono text-sm">{orderDetails.referenceId}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="text-center">

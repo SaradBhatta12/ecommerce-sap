@@ -5,15 +5,19 @@
  * @returns Formatted currency string
  */
 export function formatNPR(amount: number, showSymbol: boolean = true): string {
-  if (isNaN(amount) || amount === null || amount === undefined) {
-    return showSymbol ? "रू 0" : "0";
+  // Handle null, undefined, or invalid numbers
+  if (typeof amount !== 'number' || isNaN(amount) || amount === null || amount === undefined) {
+    return showSymbol ? "रू 0.00" : "0.00";
   }
+
+  // Ensure amount is a valid number and round to 2 decimal places
+  const validAmount = Math.round(amount * 100) / 100;
 
   // Format number with commas for thousands separator
   const formatted = new Intl.NumberFormat('en-IN', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(validAmount);
 
   return showSymbol ? `रू ${formatted}` : formatted;
 }
@@ -24,8 +28,9 @@ export function formatNPR(amount: number, showSymbol: boolean = true): string {
  * @returns Formatted currency string with "Rupees" text
  */
 export function formatNPRWithText(amount: number): string {
-  if (isNaN(amount) || amount === null || amount === undefined) {
-    return "रू 0 Rupees";
+  // Handle null, undefined, or invalid numbers
+  if (typeof amount !== 'number' || isNaN(amount) || amount === null || amount === undefined) {
+    return "रू 0.00 Rupees";
   }
 
   const formatted = formatNPR(amount, false);
@@ -38,7 +43,7 @@ export function formatNPRWithText(amount: number): string {
  * @returns Parsed number
  */
 export function parseNPR(nprString: string): number {
-  if (!nprString) return 0;
+  if (!nprString || typeof nprString !== 'string') return 0;
   
   // Remove currency symbols and text
   const cleanString = nprString
@@ -48,7 +53,7 @@ export function parseNPR(nprString: string): number {
     .trim();
   
   const parsed = parseFloat(cleanString);
-  return isNaN(parsed) ? 0 : parsed;
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100; // Round to 2 decimal places
 }
 
 /**
@@ -58,5 +63,15 @@ export function parseNPR(nprString: string): number {
  * @returns Amount in NPR
  */
 export function convertUSDToNPR(usdAmount: number, exchangeRate: number = 132): number {
-  return usdAmount * exchangeRate;
+  // Validate inputs
+  if (typeof usdAmount !== 'number' || isNaN(usdAmount) || usdAmount < 0) {
+    return 0;
+  }
+  
+  if (typeof exchangeRate !== 'number' || isNaN(exchangeRate) || exchangeRate <= 0) {
+    exchangeRate = 132; // Default fallback rate
+  }
+  
+  const result = usdAmount * exchangeRate;
+  return Math.round(result * 100) / 100; // Round to 2 decimal places
 }

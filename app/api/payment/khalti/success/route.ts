@@ -25,13 +25,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (status === 'Completed') {
-      // Payment successful - create order and redirect to success page
-      const successUrl = new URL('/checkout/success', request.url);
+      // Payment successful - redirect back to checkout with payment details
+      const successUrl = new URL('/checkout', request.url);
       successUrl.searchParams.set('payment_method', 'khalti');
-      successUrl.searchParams.set('transaction_id', transactionId);
-      successUrl.searchParams.set('ref_id', pidx);
-      successUrl.searchParams.set('amount', amount);
-      successUrl.searchParams.set('create_order', 'true');
+      successUrl.searchParams.set('oid', transactionId);
+      successUrl.searchParams.set('refId', pidx);
+      successUrl.searchParams.set('amt', amount);
       
       return NextResponse.redirect(successUrl);
     } else {

@@ -10,6 +10,7 @@ import { MetricCard } from "@/components/admin/analytics/MetricCard";
 import { AnalyticsChart } from "@/components/admin/analytics/AnalyticsChart";
 import { RecentActivity } from "@/components/admin/analytics/RecentActivity";
 import { toast } from "sonner";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import {
   DollarSign,
   ShoppingCart,
@@ -113,6 +114,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const { formatPrice } = useCurrency();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<"7d" | "30d" | "90d" | "1y">("30d");
@@ -283,7 +285,7 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               title="Total Revenue"
-              value={data ? `Rs ${data.dashboard.totalRevenue.toLocaleString()}` : "Rs 0"}
+              value={data ? formatPrice(data.dashboard.totalRevenue) : formatPrice(0)}
               change={data?.performance.changes.revenue}
               changeLabel="vs last period"
               icon={<DollarSign className="h-4 w-4" />}
@@ -317,7 +319,7 @@ export default function AnalyticsPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <MetricCard
               title="Average Order Value"
-              value={data?.performance?.current?.avgOrderValue ? `Rs ${data.performance.current.avgOrderValue.toFixed(2)}` : "Rs 0"}
+              value={data?.performance?.current?.avgOrderValue ? formatPrice(data.performance.current.avgOrderValue) : formatPrice(0)}
               change={data?.performance.changes.avgOrderValue}
               changeLabel="vs last period"
               icon={<TrendingUp className="h-4 w-4" />}
@@ -349,7 +351,7 @@ export default function AnalyticsPage() {
               dataKey="sales"
               color="#8884d8"
               loading={loading}
-              formatValue={(value) => `Rs ${value.toLocaleString()}`}
+              formatValue={(value) => formatPrice(value)}
             />
             <AnalyticsChart
               title="Revenue by Category"
@@ -358,7 +360,7 @@ export default function AnalyticsPage() {
               type="pie"
               dataKey="value"
               loading={loading}
-              formatValue={(value) => `Rs ${value.toLocaleString()}`}
+              formatValue={(value) => formatPrice(value)}
             />
           </div>
         </TabsContent>
@@ -375,7 +377,7 @@ export default function AnalyticsPage() {
               color="#10b981"
               loading={loading}
               height={400}
-              formatValue={(value) => `Rs ${value.toLocaleString()}`}
+              formatValue={(value) => formatPrice(value)}
             />
             
             <div className="grid gap-6 lg:grid-cols-2">
@@ -387,7 +389,7 @@ export default function AnalyticsPage() {
                 dataKey="value"
                 color="#f59e0b"
                 loading={loading}
-                formatValue={(value) => `Rs ${value.toLocaleString()}`}
+                formatValue={(value) => formatPrice(value)}
               />
               
               <Card>
@@ -414,7 +416,7 @@ export default function AnalyticsPage() {
                             <span className="font-medium">{category._id}</span>
                           </div>
                           <div className="text-right">
-                            <div className="font-semibold">Rs {category.revenue.toLocaleString()}</div>
+                            <div className="font-semibold">{formatPrice(category.revenue)}</div>
                             <div className="text-xs text-muted-foreground">{category.orders} orders</div>
                           </div>
                         </div>
@@ -462,7 +464,7 @@ export default function AnalyticsPage() {
                         <div className="flex-1">
                           <div className="font-medium">{product.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {product.totalSold} sold • Rs {product.revenue.toLocaleString()} revenue
+                            {product.totalSold} sold • {formatPrice(product.revenue)} revenue
                           </div>
                         </div>
                       </div>
@@ -606,7 +608,7 @@ export default function AnalyticsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold">Rs {customer.totalSpent.toLocaleString()}</div>
+                          <div className="font-semibold">{formatPrice(customer.totalSpent)}</div>
                           <div className="text-xs text-muted-foreground">{customer.orderCount} orders</div>
                         </div>
                       </div>

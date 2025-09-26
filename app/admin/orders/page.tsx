@@ -48,6 +48,7 @@ import { IOrder } from "@/models/order";
 import Image from "next/image";
 import user from "@/models/user";
 import { Avatar } from "@/components/ui/avatar";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -95,7 +96,8 @@ const getPaymentStatusIcon = (status: string) => {
 };
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<IOrder[]>([]);
+  const { formatPrice } = useCurrency();
+  const [orders, setOrders] = useState([]);
   console.log(orders);
   const getAllOrdersAdmin = async () => {
     try {
@@ -161,7 +163,7 @@ export default function OrdersPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-lg sm:text-2xl font-bold">RS. 45,231</div>
+              <div className="text-lg sm:text-2xl font-bold">{formatPrice(45231)}</div>
               <div className="flex items-center text-xs text-muted-foreground mt-1">
                 <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
                 <span className="text-green-500 font-medium">+8%</span>
@@ -359,11 +361,7 @@ export default function OrdersPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            NPR{". "}
-                            {order.total.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {formatPrice(order.total)}
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>

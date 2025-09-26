@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Category {
   _id: string;
@@ -39,6 +40,8 @@ interface CollectionsSectionProps {
 }
 
 export default function CollectionsSection({ categories = [], featuredProducts = [] }: CollectionsSectionProps) {
+  const { formatPrice } = useCurrency();
+  
   return (
     <section className="relative py-20 lg:py-32 bg-gray-50 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-20">
@@ -157,11 +160,11 @@ export default function CollectionsSection({ categories = [], featuredProducts =
                       <div className="flex items-center gap-2">
                         {product.onSale && product.salePrice ? (
                           <>
-                            <span className="font-bold text-black">${product.salePrice}</span>
-                            <span className="text-gray-500 line-through text-sm">${product.price}</span>
+                            <span className="font-bold text-black">{formatPrice(product.salePrice)}</span>
+                            <span className="text-gray-500 line-through text-sm">{formatPrice(product.price)}</span>
                           </>
                         ) : (
-                          <span className="font-bold text-black">${product.price}</span>
+                          <span className="font-bold text-black">{formatPrice(product.price)}</span>
                         )}
                       </div>
                     </div>

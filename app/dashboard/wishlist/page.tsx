@@ -15,6 +15,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetWishlistQuery, useRemoveFromWishlistMutation } from "@/store/api/userApi";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatPrice } from "@/lib/utils";
+import { useDispatch } from "react-redux";
 
 interface WishlistItem {
   _id: string;
@@ -36,6 +39,9 @@ interface WishlistItem {
 export default function WishlistPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const dispatch = useDispatch();
+  const { formatPrice } = useCurrency();
+  
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -404,14 +410,14 @@ export default function WishlistPage() {
                 
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-primary">
-                      Rs. {item.product.price.toFixed(2)}
-                    </span>
-                    {item.product.originalPrice && item.product.originalPrice > item.product.price && (
-                      <span className="text-sm text-muted-foreground line-through">
-                        Rs. {item.product.originalPrice.toFixed(2)}
-                      </span>
-                    )}
+                    <span className="text-lg font-bold text-green-600">
+                          {formatPrice(item.product.price)}
+                        </span>
+                        {item.product.originalPrice && item.product.originalPrice > item.product.price && (
+                          <span className="text-sm text-muted-foreground line-through">
+                            {formatPrice(item.product.originalPrice)}
+                          </span>
+                        )}
                   </div>
                 </div>
                 
@@ -480,12 +486,12 @@ export default function WishlistPage() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-3xl font-bold text-primary">
-                        Rs. {selectedItem.product.price.toFixed(2)}
+                      <span className="text-2xl font-bold text-primary">
+                        {formatPrice(selectedItem.product.price)}
                       </span>
                       {selectedItem.product.originalPrice && selectedItem.product.originalPrice > selectedItem.product.price && (
                         <span className="text-lg text-muted-foreground line-through">
-                          Rs. {selectedItem.product.originalPrice.toFixed(2)}
+                          {formatPrice(selectedItem.product.originalPrice)}
                         </span>
                       )}
                     </div>

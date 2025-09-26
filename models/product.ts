@@ -405,9 +405,11 @@ productSchema.pre("save", function (next) {
     this.slug = slugify(this.name);
   }
 
-  // Calculate discount price if on sale
-  if (this.isOnSale && this.discount) {
-    this.discountPrice = this.price - (this.price * this.discount) / 100;
+  // Calculate discount price if on sale with proper validation
+  if (this.isOnSale && this.discount && typeof this.discount === 'number' && !isNaN(this.discount) && 
+      this.discount > 0 && this.discount <= 100 && typeof this.price === 'number' && !isNaN(this.price) && this.price > 0) {
+    const discountAmount = (this.price * this.discount) / 100;
+    this.discountPrice = Math.round((this.price - discountAmount) * 100) / 100;
   } else {
     this.discountPrice = undefined;
   }
