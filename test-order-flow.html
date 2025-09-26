@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Order Flow</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .step { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Order Flow</h1>
+        
+        <div class="step">
+            <h3>Step 1: Add Test Items to Cart</h3>
+            <button onclick="addTestItemsToCart()">Add Test Items to Cart</button>
+            <div id="cartStatus"></div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 2: Create Test Order Data</h3>
+            <button onclick="createTestOrderData()">Create Order Data in Session Storage</button>
+            <div id="orderDataStatus"></div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 3: Test Payment Flow</h3>
+            <button onclick="testEsewaPayment()">Test eSewa Payment</button>
+            <button onclick="checkSessionStorage()">Check Session Storage</button>
+            <div id="paymentStatus"></div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 4: Navigate to Checkout</h3>
+            <button onclick="goToCheckout()">Go to Checkout Page</button>
+            <button onclick="goToCheckoutWithParams()">Go to Checkout with Payment Params</button>
+        </div>
+        
+        <div class="step info">
+            <h3>Session Storage Contents</h3>
+            <button onclick="displaySessionStorage()">Refresh Session Storage</button>
+            <pre id="sessionStorageContent"></pre>
+        </div>
+    </div>
+
+    <script>
+        function addTestItemsToCart() {
+            const testCart = [
+                {
+                    id: "test-product-1",
+                    name: "Test Product 1",
+                    price: 50,
+                    quantity: 1,
+                    image: "/placeholder.jpg"
+                },
+                {
+                    id: "test-product-2", 
+                    name: "Test Product 2",
+                    price: 60,
+                    quantity: 1,
+                    image: "/placeholder.jpg"
+                }
+            ];
+            
+            localStorage.setItem('cart', JSON.stringify(testCart));
+            document.getElementById('cartStatus').innerHTML = '<div class="success">✓ Test items added to cart</div>';
+            displaySessionStorage();
+        }
+        
+        function createTestOrderData() {
+            const orderData = {
+                items: [
+                    {
+                        id: "test-product-1",
+                        name: "Test Product 1", 
+                        price: 50,
+                        quantity: 1,
+                        image: "/placeholder.jpg"
+                    },
+                    {
+                        id: "test-product-2",
+                        name: "Test Product 2",
+                        price: 60, 
+                        quantity: 1,
+                        image: "/placeholder.jpg"
+                    }
+                ],
+                total: 110,
+                subtotal: 110,
+                shipping: 0,
+                tax: 0,
+                discount: 0,
+                address: {
+                    fullName: "Test User",
+                    address: "Test Address",
+                    city: "Kathmandu",
+                    province: "Bagmati",
+                    postalCode: "44600",
+                    phone: "9800000000"
+                },
+                paymentMethod: "esewa",
+                timestamp: new Date().toISOString()
+            };
+            
+            sessionStorage.setItem('orderData', JSON.stringify(orderData));
+            document.getElementById('orderDataStatus').innerHTML = '<div class="success">✓ Order data created in session storage</div>';
+            displaySessionStorage();
+        }
+        
+        function testEsewaPayment() {
+            // Simulate eSewa payment parameters that would be returned
+            const esewaParams = new URLSearchParams({
+                data: 'eyJ0cmFuc2FjdGlvbl9jb2RlIjoiMDAwQzY3TSIsInN0YXR1cyI6IkNPTVBMRVRFIiwidG90YWxfYW1vdW50IjoiMTEwLjAiLCJ0cmFuc2FjdGlvbl91dWlkIjoiMTc1ODkwNTc1OTAyMi1jZzhnN3BqeGgiLCJwcm9kdWN0X2NvZGUiOiJFUEFZVEVTVCIsInNpZ25lZF9maWVsZF9uYW1lcyI6InRyYW5zYWN0aW9uX2NvZGUsc3RhdHVzLHRvdGFsX2Ftb3VudCx0cmFuc2FjdGlvbl91dWlkLHByb2R1Y3RfY29kZSxzaWduZWRfZmllbGRfbmFtZXMiLCJzaWduYXR1cmUiOiJSOCtKck85Y1BTSDhkZXRlK2Vxcm41QVpUL0U5ODJXZ0l5QlpJUnBCOVZFPSJ9'
+            });
+            
+            document.getElementById('paymentStatus').innerHTML = '<div class="success">✓ eSewa payment parameters ready</div>';
+        }
+        
+        function checkSessionStorage() {
+            const orderData = sessionStorage.getItem('orderData');
+            if (orderData) {
+                document.getElementById('paymentStatus').innerHTML = '<div class="success">✓ Order data found in session storage</div>';
+            } else {
+                document.getElementById('paymentStatus').innerHTML = '<div style="background: #f8d7da; border-color: #f5c6cb; padding: 10px; border-radius: 3px;">✗ No order data in session storage</div>';
+            }
+            displaySessionStorage();
+        }
+        
+        function goToCheckout() {
+            window.open('http://localhost:3000/checkout', '_blank');
+        }
+        
+        function goToCheckoutWithParams() {
+            const params = new URLSearchParams({
+                data: 'eyJ0cmFuc2FjdGlvbl9jb2RlIjoiMDAwQzY3TSIsInN0YXR1cyI6IkNPTVBMRVRFIiwidG90YWxfYW1vdW50IjoiMTEwLjAiLCJ0cmFuc2FjdGlvbl91dWlkIjoiMTc1ODkwNTc1OTAyMi1jZzhnN3BqeGgiLCJwcm9kdWN0X2NvZGUiOiJFUEFZVEVTVCIsInNpZ25lZF9maWVsZF9uYW1lcyI6InRyYW5zYWN0aW9uX2NvZGUsc3RhdHVzLHRvdGFsX2Ftb3VudCx0cmFuc2FjdGlvbl91dWlkLHByb2R1Y3RfY29kZSxzaWduZWRfZmllbGRfbmFtZXMiLCJzaWduYXR1cmUiOiJSOCtKck85Y1BTSDhkZXRlK2Vxcm41QVpUL0U5ODJXZ0l5QlpJUnBCOVZFPSJ9'
+            });
+            window.open(`http://localhost:3000/checkout?${params.toString()}`, '_blank');
+        }
+        
+        function displaySessionStorage() {
+            const content = {
+                orderData: sessionStorage.getItem('orderData'),
+                cart: localStorage.getItem('cart')
+            };
+            
+            document.getElementById('sessionStorageContent').textContent = JSON.stringify(content, null, 2);
+        }
+        
+        // Initialize display
+        displaySessionStorage();
+    </script>
+</body>
+</html>

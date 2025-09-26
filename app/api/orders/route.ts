@@ -62,28 +62,39 @@ export async function POST(request: Request) {
       }
     }
 
+    // Generate order number
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     // Create order
     const order = new Order({
       user: session.user.id,
-      items: orderData.items.map((item: any) => ({
+      orderNumber: orderNumber,
+      items: items.map((item: any) => ({
         product: item.productId,
         name: item.name || 'Product',
         price: item.price,
         quantity: item.quantity,
         image: item.image || ''
       })),
-      address: orderData.shippingAddress,
-      paymentMethod: orderData.paymentMethod,
-      paymentStatus: orderData.paymentMethod === 'cod' ? 'pending' : 'paid',
+      address: {
+        fullName: address.fullName,
+        address: address.address,
+        city: address.city,
+        province: address.province,
+        postalCode: address.postalCode,
+        phone: address.phone
+      },
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
       status: 'pending',
-      subtotal: orderData.subtotal,
-      shipping: orderData.shipping,
-      discount: orderData.discount ? {
-        id: orderData.discount.id,
-        code: orderData.discount.code,
-        amount: orderData.discount.amount
+      subtotal: subtotal,
+      shipping: shipping || 0,
+      discount: discount ? {
+        id: discount.id,
+        code: discount.code,
+        amount: discount.amount
       } : undefined,
-      total: orderData.total,
+      total: total,
     });
 
     // Update product stock
@@ -97,9 +108,9 @@ export async function POST(request: Request) {
     await order.save();
 
     // Update discount usage count if discount was applied
-    if (orderData.discount) {
+    if (discount) {
       await Discount.findByIdAndUpdate(
-        orderData.discount.id,
+        discount.id,
         { $inc: { usageCount: 1 } }
       );
     }
@@ -108,11 +119,12 @@ export async function POST(request: Request) {
       success: true,
       message: "Order created successfully",
       orderId: order._id,
-      orderNumber: order._id,
+      orderNumber: orderNumber,
       status: order.status,
       total: order.total,
       order: {
         _id: order._id,
+        orderNumber: orderNumber,
         user: order.user,
         items: order.items,
         address: order.address,

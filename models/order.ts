@@ -10,6 +10,7 @@ export interface IOrderItem {
 
 export interface IOrder extends Document {
   user: mongoose.Types.ObjectId;
+  orderNumber: string;
   items: IOrderItem[];
   address: {
     fullName: string;
@@ -51,6 +52,13 @@ const orderSchema = new Schema<IOrder>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    orderNumber: {
+      type: String,
+      unique: true,
+      default: function() {
+        return `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      }
     },
     items: [
       {

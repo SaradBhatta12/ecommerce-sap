@@ -1,97 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import dbConnect from '@/lib/db-connect';
+import connectDB from '@/lib/db-connect';
 import Order from '@/models/order';
 import User from '@/models/user';
+import Product from '@/models/product';
 import Discount from '@/models/discount';
-import { verifyEsewaPayment, isEsewaPaymentSuccessful } from '@/lib/payment/esewa';
-import { verifyKhaltiPayment, isKhaltiPaymentSuccessful } from '@/lib/payment/khalti';
 
 export async function POST(request: Request) {
   try {
+    // Get user session
     const session = await getServerSession(authOptions);
-    
     if (!session?.user?.id) {
       return NextResponse.json(
-        { success: false, message: 'Authentication required' },
+        { success: false, message: "Unauthorized" },
         { status: 401 }
       );
     }
 
     const body = await request.json();
-    console.log('Received request body:', body);
     const { orderData, paymentDetails } = body;
 
-    // Validate required fields
+    console.log('Payment completion request:', { items: orderData.items, paymentDetails });
+
+    // Validate required data
     if (!orderData || !paymentDetails) {
       return NextResponse.json(
-        { success: false, message: 'Missing order data or payment details' },
-        { status: 400 }
-      );
-    }
-
-    // Validate payment details structure
-    if (!paymentDetails.provider || !paymentDetails.transactionId) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid payment details: missing provider or transaction ID' },
-        { status: 400 }
-      );
-    }
-
-    // Validate payment provider
-    const validProviders = ['esewa', 'khalti'];
-    if (!validProviders.includes(paymentDetails.provider.toLowerCase())) {
-      return NextResponse.json(
-        { success: false, message: `Unsupported payment provider: ${paymentDetails.provider}` },
-        { status: 400 }
-      );
-    }
-
-    let isPaymentValid = false;
-    let verificationError = null;
-
-    try {
-      // Verify payment based on provider
-      if (paymentDetails.provider.toLowerCase() === 'esewa') {
-        console.log('eSewa payment details received:', paymentDetails);
-        
-        // Map payment details to eSewa verification format
-        const esewaVerificationParams = {
-          productCode: paymentDetails.productCode || process.env.NEXT_PUBLIC_ESEWA_MERCHANT_CODE || 'EPAYTEST',
-          transactionUuid: paymentDetails.transactionId,
-          totalAmount: paymentDetails.amount || orderData.total
-        };
-        
-        console.log('eSewa verification params:', esewaVerificationParams);
-        
-        const esewaResult = await verifyEsewaPayment(esewaVerificationParams);
-        console.log('eSewa verification result:', esewaResult);
-        
-        isPaymentValid = isEsewaPaymentSuccessful(esewaResult);
-        if (!isPaymentValid) {
-          verificationError = `eSewa payment verification failed. Status: ${esewaResult.status}`;
-        }
-      } else if (paymentDetails.provider.toLowerCase() === 'khalti') {
-        const khaltiResult = await verifyKhaltiPayment(paymentDetails);
-        isPaymentValid = isKhaltiPaymentSuccessful(khaltiResult);
-        if (!isPaymentValid) {
-          verificationError = 'Khalti payment verification failed';
-        }
-      }
-    } catch (verifyError) {
-      console.error('Payment verification error:', verifyError);
-      verificationError = verifyError instanceof Error ? verifyError.message : 'Payment verification failed';
-      isPaymentValid = false;
-    }
-
-    if (!isPaymentValid) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: verificationError || 'Payment verification failed',
-          error: 'PAYMENT_VERIFICATION_FAILED'
-        },
+        { success: false, message: "Missing order data or payment details" },
         { status: 400 }
       );
     }
@@ -99,141 +34,202 @@ export async function POST(request: Request) {
     // Validate order data structure
     if (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Invalid order data: no items found' },
+        { success: false, message: "Invalid order items" },
         { status: 400 }
       );
     }
 
-    // Validate address ID
-    if (!orderData.addressId) {
+    if (!orderData.addressId || !orderData.paymentMethod) {
       return NextResponse.json(
-        { success: false, message: 'Invalid order data: missing address ID' },
+        { success: false, message: "Missing address or payment method" },
         { status: 400 }
       );
     }
 
-    await dbConnect();
+    // Validate payment details
+    if (!paymentDetails.provider || !paymentDetails.transactionId) {
+      return NextResponse.json(
+        { success: false, message: "Invalid payment details" },
+        { status: 400 }
+      );
+    }
+
+    // Connect to database
+    await connectDB();
 
     // Verify user exists and get user with addresses
-    const user = await User.findById(session.user.id).populate('addresses');
+    const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json(
-        { success: false, message: 'User not found' },
+        { success: false, message: "User not found" },
         { status: 404 }
       );
     }
 
-    // Find the selected address
-    const selectedAddress = user.addresses?.find((addr: any) => addr._id.toString() === orderData.addressId);
+    // Find the selected address from user's addresses array
+    const selectedAddress = user.addresses?.find((addr: any) =>
+      addr._id?.toString() === orderData.addressId
+    );
+
     if (!selectedAddress) {
       return NextResponse.json(
-        { success: false, message: 'Selected address not found' },
+        { success: false, message: "Selected address not found" },
         { status: 400 }
       );
     }
 
-    try {
-      // Generate order number
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Validate products and check stock
+    const productIds = orderData.items.map((item: any) => item.productId);
+    const products = await Product.find({ _id: { $in: productIds } });
+    console.log(products.length, productIds.length)
 
-      // Create order in database
-      const order = new Order({
-        user: session.user.id,
-        items: orderData.items.map((item: any) => ({
-          product: item.productId,
-          name: item.name || 'Product',
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image || '',
-        })),
-        address: {
-          fullName: selectedAddress.fullName,
-          address: selectedAddress.address,
-          city: selectedAddress.city,
-          province: selectedAddress.province,
-          postalCode: selectedAddress.postalCode,
-          phone: selectedAddress.phone
-        },
-        subtotal: orderData.subtotal,
-        shipping: orderData.shipping || 0,
-        discount: orderData.discount ? {
-          id: orderData.discount.id,
-          code: orderData.discount.code,
-          amount: orderData.discount.amount,
-        } : undefined,
-        total: orderData.total,
-        paymentMethod: paymentDetails.provider,
-        paymentStatus: 'paid',
-        paymentDetails: {
-          transactionId: paymentDetails.transactionId,
-          provider: paymentDetails.provider,
-          amount: paymentDetails.amount || orderData.total,
-          currency: 'NPR',
-          status: 'completed',
-          referenceId: paymentDetails.refId || paymentDetails.transactionId,
-          metadata: {
-            refId: paymentDetails.refId,
-          },
-        },
-        status: 'pending'
-      });
+    if (!(products.length === productIds.length)) {
+      return NextResponse.json(
+        { success: false, message: "Some products not found" },
+        { status: 400 }
+      );
+    }
 
-      await order.save();
-
-      // Apply discount usage if discount was used
-      if (orderData.discount && orderData.discount.id) {
-        try {
-          await Discount.findByIdAndUpdate(
-            orderData.discount.id,
-            { $inc: { usageCount: 1 } }
-          );
-        } catch (discountError) {
-          console.warn("Failed to update discount usage:", discountError);
-        }
+    // Check stock availability
+    for (const item of orderData.items) {
+      const product = products.find(p => p._id.toString() === item.productId);
+      if (!product) {
+        return NextResponse.json(
+          { success: false, message: `Product ${item.name || item.productId} not found` },
+          { status: 400 }
+        );
       }
 
-      // Return success response with both flat properties and nested order object
-      return NextResponse.json({
-        success: true,
-        message: 'Order created successfully',
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        total: order.total,
-        order: order
-      });
-
-    } catch (dbError) {
-      console.error('Database error creating order:', dbError);
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Failed to create order in database',
-          error: 'DATABASE_ERROR'
-        },
-        { status: 500 }
-      );
+      if (product.stock < item.quantity) {
+        return NextResponse.json(
+          { success: false, message: `Insufficient stock for ${product.name}` },
+          { status: 400 }
+        );
+      }
     }
 
-  } catch (error) {
-    console.error('Payment completion error:', error);
-    
-    // Handle different types of errors
-    if (error instanceof SyntaxError) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
-    }
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Internal server error during payment processing',
-        error: 'INTERNAL_SERVER_ERROR'
+    // Generate unique order number
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    // Create order
+    const order = new Order({
+      orderNumber,
+      user: session.user.id,
+      items: orderData.items.map((item: any) => ({
+        product: item.productId,
+        name: item.name || products.find(p => p._id.toString() === item.productId)?.name || 'Unknown Product',
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image || products.find(p => p._id.toString() === item.productId)?.images?.[0] || ''
+      })),
+      address: {
+        fullName: selectedAddress.fullName,
+        address: selectedAddress.address || '',
+        city: selectedAddress.district || selectedAddress.city || '',
+        province: selectedAddress.province || '',
+        postalCode: selectedAddress.postalCode || '',
+        phone: selectedAddress.phone
       },
-      { status: 500 }
+      paymentMethod: orderData.paymentMethod,
+      paymentDetails: {
+        provider: paymentDetails.provider,
+        transactionId: paymentDetails.transactionId,
+        status: paymentDetails.status || 'completed',
+        verifiedAt: new Date(),
+        ...(paymentDetails.data && { data: paymentDetails.data }),
+        ...(paymentDetails.pidx && { pidx: paymentDetails.pidx }),
+        ...(paymentDetails.oid && { oid: paymentDetails.oid }),
+        ...(paymentDetails.transaction_uuid && { transaction_uuid: paymentDetails.transaction_uuid })
+      },
+      subtotal: orderData.subtotal || 0,
+      shipping: orderData.shipping || 0,
+      total: orderData.total || 0,
+      status: 'processing',
+      paymentStatus: 'paid'
+    });
+
+    // Add discount if present
+    if (orderData.discount) {
+      order.discount = {
+        id: orderData.discount.id,
+        code: orderData.discount.code,
+        amount: orderData.discount.amount
+      };
+    }
+
+    // Save order
+    const savedOrder = await order.save();
+
+    // Update product stock
+    for (const item of orderData.items) {
+      await Product.findByIdAndUpdate(
+        item.productId,
+        { $inc: { stock: -item.quantity } }
+      );
+    }
+
+    // Update discount usage if applicable
+    if (orderData.discount?.id) {
+      try {
+        await Discount.findByIdAndUpdate(
+          orderData.discount.id,
+          { $inc: { usageCount: 1 } }
+        );
+        console.log('Discount usage updated');
+      } catch (discountError) {
+        console.warn('Failed to update discount usage:', discountError);
+        // Don't fail the order creation for discount update errors
+      }
+    }
+
+    // Return success response
+    return NextResponse.json({
+      success: true,
+      message: "Order created successfully",
+      orderId: savedOrder._id.toString(),
+      orderNumber: orderNumber,
+      status: 'confirmed',
+      paymentStatus: 'completed',
+      total: orderData.total,
+      order: {
+        id: savedOrder._id.toString(),
+        orderNumber: orderNumber,
+        status: 'confirmed',
+        paymentStatus: 'completed',
+        total: orderData.total,
+        items: savedOrder.items,
+        address: savedOrder.address,
+        createdAt: savedOrder.createdAt
+      }
+    });
+
+  } catch (error: any) {
+    console.error("Payment completion error:", error);
+
+    // Handle specific error types
+    let errorMessage = "Failed to complete payment and create order";
+    let statusCode = 500;
+
+    if (error.name === 'ValidationError') {
+      errorMessage = "Invalid order data";
+      statusCode = 400;
+    } else if (error.name === 'CastError') {
+      errorMessage = "Invalid ID format";
+      statusCode = 400;
+    } else if (error.code === 11000) {
+      errorMessage = "Duplicate order detected";
+      statusCode = 409;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: errorMessage,
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
+      { status: statusCode }
     );
   }
 }

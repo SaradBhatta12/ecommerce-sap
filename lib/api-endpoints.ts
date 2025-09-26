@@ -64,6 +64,7 @@ import Wishlist from "@/models/wishlist";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import bcrypt from "bcryptjs";
+import { validatePagination, type PaginationParams, type PaginationInfo } from "@/lib/pagination-utils";
 
 // ===== TYPE DEFINITIONS =====
 
@@ -181,19 +182,6 @@ export async function requireAdmin(): Promise<ExtendedSession> {
   }
   
   return session;
-}
-
-/**
- * Validates and normalizes pagination parameters
- * @param {PaginationParams} params - The pagination parameters to validate
- * @returns {Object} Normalized pagination parameters
- */
-export function validatePagination(params: PaginationParams) {
-  const page = Math.max(1, params.page || 1);
-  const limit = Math.min(100, Math.max(1, params.limit || 20));
-  const skip = (page - 1) * limit;
-  
-  return { page, limit, skip, search: params.search || '' };
 }
 
 // ===== AUTH ENDPOINTS =====
