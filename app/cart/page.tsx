@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useSelector, useDispatch } from "react-redux";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { formatPrice } from "@/lib/utils";
 
 import {
   removeFromCart,
@@ -50,6 +52,7 @@ export default function CartPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const cartItems = useSelector(selectCartItems);
+  const { formatPrice } = useCurrency();
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
@@ -114,14 +117,21 @@ export default function CartPage() {
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
+      (total, item) => {
+        // Validate item properties
+        const itemPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+        const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0 ? item.quantity : 0;
+        return total + (itemPrice * itemQuantity);
+      },
       0
     );
   };
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
-    return subtotal - discount;
+    const validDiscount = typeof discount === 'number' && !isNaN(discount) ? Math.max(0, discount) : 0;
+    const result = subtotal - validDiscount;
+    return Math.round(result * 100) / 100; // Round to 2 decimal places
   };
 
   const handleApplyCoupon = async () => {
@@ -163,14 +173,14 @@ export default function CartPage() {
 
         // Check minimum purchase requirement
         if (data.discount.minPurchase && subtotal < data.discount.minPurchase) {
-          toast.error(`This coupon requires a minimum purchase of Rs. ${data.discount.minPurchase.toLocaleString()}`);
+          toast.error(`This coupon requires a minimum purchase of ${formatPrice(data.discount.minPurchase)}`);
           setIsApplyingCoupon(false);
           return;
         }
 
         setDiscount(discountAmount);
         setAppliedDiscount(data.discount);
-        toast.success(`You saved Rs. ${discountAmount.toLocaleString()}!`);
+        toast.success(`You saved ${formatPrice(discountAmount)}!`);
       } else {
         toast.error(data.message || "The coupon code you entered is invalid or expired.")
       }
@@ -263,7 +273,7 @@ export default function CartPage() {
                           {product.name}
                         </h3>
                         <p className="text-sm font-bold mt-1">
-                          Rs. {product.price.toLocaleString()}
+                          {formatPrice(product.price)}
                         </p>
                       </CardContent>
                     </Card>
@@ -336,7 +346,7 @@ export default function CartPage() {
                     <div className="flex-grow sm:ml-6 mt-4 sm:mt-0">
                       <h3 className="text-base font-medium">{item.name}</h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Rs. {item.price.toLocaleString()}
+                        {formatPrice(item.price)}
                       </p>
                       <div className="flex items-center mt-2 space-x-4">
                         <div className="flex items-center">
@@ -394,7 +404,7 @@ export default function CartPage() {
                       </div>
                     </div>
                     <div className="mt-4 sm:mt-0 font-bold">
-                      Rs. {(item.price * item.quantity).toLocaleString()}
+                      {formatPrice(item.price * item.quantity)}
                     </div>
                   </div>
                 ))}
@@ -428,8 +438,8 @@ export default function CartPage() {
                             {product.name}
                           </h3>
                           <p className="text-sm font-bold mt-1">
-                            Rs. {product.price.toLocaleString()}
-                          </p>
+                          {formatPrice(product.price)}
+                        </p>
                         </CardContent>
                       </Card>
                     </Link>
@@ -449,7 +459,7 @@ export default function CartPage() {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>Rs. {calculateSubtotal().toLocaleString()}</span>
+                  <span>{formatPrice(calculateSubtotal())}</span>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -476,7 +486,7 @@ export default function CartPage() {
                         Discount ({appliedDiscount.code})
                       </span>
                       <div className="flex items-center gap-2">
-                        <span>- Rs. {discount.toLocaleString()}</span>
+                        <span>- {formatPrice(discount)}</span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -511,7 +521,7 @@ export default function CartPage() {
                 <Separator />
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>Rs. {calculateTotal().toLocaleString()}</span>
+                  <span>{formatPrice(calculateTotal())}</span>
                 </div>
 
                 <div className="text-xs text-muted-foreground">

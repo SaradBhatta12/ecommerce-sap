@@ -28,8 +28,12 @@ import {
   useGetAnalyticsQuery,
   useGetRecentSalesQuery,
 } from "@/store";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import AdminStats from "@/components/admin/admin-stats";
 
 export default function AdminDashboardPage() {
+  const { formatPrice } = useCurrency();
+  
   // RTK Query hooks for data fetching
   const {
     data: stats,
@@ -102,135 +106,7 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="hover-card-effect">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Revenue
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Loading...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    रू {stats?.totalRevenue?.toLocaleString() || '0'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.revenueChange > 0 ? '+' : ''}{stats?.revenueChange || 0}% from last month
-                  </p>
-                  <div className="mt-4 h-1 w-full bg-muted overflow-hidden rounded">
-                    <div 
-                      className="bg-primary h-full transition-all duration-500" 
-                      style={{ width: `${Math.min(Math.abs(stats?.revenueChange || 0), 100)}%` }}
-                    />
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Card className="hover-card-effect">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Orders
-              </CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Loading...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {stats?.totalOrders?.toLocaleString() || '0'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.ordersChange > 0 ? '+' : ''}{stats?.ordersChange || 0}% from last month
-                  </p>
-                  <div className="mt-4 h-1 w-full bg-muted overflow-hidden rounded">
-                    <div 
-                      className="bg-primary h-full transition-all duration-500" 
-                      style={{ width: `${Math.min(Math.abs(stats?.ordersChange || 0), 100)}%` }}
-                    />
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Card className="hover-card-effect">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Active Products
-              </CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Loading...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {stats?.totalProducts?.toLocaleString() || '0'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.productsChange > 0 ? '+' : ''}{stats?.productsChange || 0}% from last month
-                  </p>
-                  <div className="mt-4 h-1 w-full bg-muted overflow-hidden rounded">
-                    <div 
-                      className="bg-primary h-full transition-all duration-500" 
-                      style={{ width: `${Math.min(Math.abs(stats?.productsChange || 0), 100)}%` }}
-                    />
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Card className="hover-card-effect">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Users
-              </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Loading...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">
-                    {stats?.totalUsers?.toLocaleString() || '0'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.usersChange > 0 ? '+' : ''}{stats?.usersChange || 0}% from last month
-                  </p>
-                  <div className="mt-4 h-1 w-full bg-muted overflow-hidden rounded">
-                    <div 
-                      className="bg-primary h-full transition-all duration-500" 
-                      style={{ width: `${Math.min(Math.abs(stats?.usersChange || 0), 100)}%` }}
-                    />
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <AdminStats />
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card className="col-span-4 hover-card-effect">
@@ -264,7 +140,7 @@ export default function AdminDashboardPage() {
                         {analytics.revenue.slice(-3).map((item, index) => (
                           <div key={index} className="text-center">
                             <div className="font-medium">{item.month}</div>
-                            <div className="text-muted-foreground">रू {item.amount.toLocaleString()}</div>
+                            <div className="text-muted-foreground">{formatPrice(item.amount)}</div>
                           </div>
                         ))}
                       </div>
@@ -323,7 +199,7 @@ export default function AdminDashboardPage() {
                         </p>
                       </div>
                       <div className="font-medium">
-                        रू {sale.amount.toLocaleString()}
+                        {formatPrice(sale.amount)}
                       </div>
                     </div>
                   ))}

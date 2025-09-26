@@ -12,10 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useGetWishlistQuery, useRemoveFromWishlistMutation } from "@/store";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 export default function WishlistPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { formatPrice } = useCurrency();
   const { data: wishlistItems = [], isLoading, error } = useGetWishlistQuery(undefined, {
     skip: !session?.user?.email,
     // Prevent unnecessary refetches
@@ -140,11 +142,11 @@ export default function WishlistPage() {
               <h3 className="font-semibold mb-2 line-clamp-2">{item.product.name}</h3>
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-bold text-lg">
-                  Rs. {item.product.salePrice || item.product.price}
+                  {formatPrice(item.product.salePrice || item.product.price)}
                 </span>
                 {item.product.salePrice && (
                   <span className="text-sm text-muted-foreground line-through">
-                    Rs. {item.product.price}
+                    {formatPrice(item.product.price)}
                   </span>
                 )}
               </div>

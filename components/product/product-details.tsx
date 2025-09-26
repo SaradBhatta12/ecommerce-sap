@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { useGetWishlistQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface Product {
   reviews: number
@@ -54,6 +55,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const params = useParams()
   const domain = params.domain as string
   // Store functionality removed
+  const { formatPrice } = useCurrency()
 
   const [quantity, setQuantity] = useState(1)
   // RTK Query hooks for wishlist operations
@@ -169,13 +171,13 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         {product.discountPrice || (product.isOnSale && product.discount) ? (
           <>
             <span className="text-3xl font-bold">
-              Rs. {(product.discountPrice || product.price - (product.price * product.discount) / 100).toLocaleString()}
+              {formatPrice(product.discountPrice || product.price - (product.price * product.discount) / 100)}
             </span>
-            <span className="text-xl text-muted-foreground line-through">Rs. {product.price.toLocaleString()}</span>
+            <span className="text-xl text-muted-foreground line-through">{formatPrice(product.price)}</span>
             <Badge variant="destructive">{product.discount}% Off</Badge>
           </>
         ) : (
-          <span className="text-3xl font-bold">Rs. {product.price.toLocaleString()}</span>
+          <span className="text-3xl font-bold">{formatPrice(product.price)}</span>
         )}
       </div>
 

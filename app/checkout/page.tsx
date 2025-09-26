@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { clearCart } from "@/store";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Package, CreditCard, Calendar } from "lucide-react";
 import PaymentMethods from "@/components/checkout/payment-methods";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -30,6 +38,7 @@ import {
   useApplyDiscountMutation
 } from "@/store";
 import type { RootState } from "@/store";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface CartItem {
   id: string;
@@ -58,14 +67,25 @@ interface Discount {
   discountAmount: number;
 }
 
+interface OrderDetails {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  total: number;
+  referenceId?: string;
+}
+
 export default function CheckoutPage() {
   const { domain } = useParams();
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch();
   const cartItems = useSelector((state: RootState) => state?.cart?.items) as CartItem[];
+  const { formatPrice } = useCurrency();
   
-  // RTK Query hooks
+  // API hooks
   const { data: addressesData, isLoading: addressesLoading, refetch: refetchAddresses } = useGetUserAddressesQuery(undefined, {
     skip: status !== "authenticated"
   });
@@ -73,35 +93,55 @@ export default function CheckoutPage() {
   const [validateDiscount, { isLoading: isValidatingDiscount }] = useValidateDiscountMutation();
   const [applyDiscount] = useApplyDiscountMutation();
   
-  // Local state
+  // State
   const [selectedAddress, setSelectedAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("esewa");
   const [discountCode, setDiscountCode] = useState("");
   const [discount, setDiscount] = useState<Discount | null>(null);
   const [discountError, setDiscountError] = useState("");
   
-  const addresses = addressesData?.addresses as Address[] || [];
-  // Calculate totals
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const addresses = (addressesData as any)?.addresses || [];
+  
+  // Calculate subtotal with proper validation
   const subtotal = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total, item) => {
+      // Validate item properties
+      const itemPrice = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+      const itemQuantity = typeof item.quantity === 'number' && !isNaN(item.quantity) && item.quantity > 0 ? item.quantity : 0;
+      return total + (itemPrice * itemQuantity);
+    },
     0
   );
-  const shipping = 100; // Fixed shipping cost
-  const discountAmount = discount ? discount.discountAmount : 0;
-  const total = subtotal + shipping - discountAmount;
+  
+  // Fixed shipping cost with validation
+  const shipping = 100;
+  
+  // Calculate discount amount with validation
+  const discountAmount = discount && typeof discount.discountAmount === 'number' && !isNaN(discount.discountAmount) 
+    ? Math.max(0, discount.discountAmount) 
+    : 0;
+  
+  // Calculate total with proper rounding
+  const total = Math.round((subtotal + shipping - discountAmount) * 100) / 100;
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth?callbackUrl=/checkout");
+      router.push("/auth/signin");
     } else if (status === "authenticated" && cartItems.length === 0) {
-      router.push("/cart");
+      router.push("/");
     }
   }, [status, cartItems.length, router]);
 
-  // Set default address when addresses are loaded
+  // Auto-select default address
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
-      const defaultAddress = addresses.find((addr) => addr.isDefault);
+      const defaultAddress = addresses.find((addr: Address) => addr.isDefault);
       if (defaultAddress) {
         setSelectedAddress(defaultAddress._id);
       } else {
@@ -110,12 +150,197 @@ export default function CheckoutPage() {
     }
   }, [addresses, selectedAddress]);
 
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) return;
-
-    try {
-      setDiscountError("");
+  // Handle payment response from URL parameters
+  useEffect(() => {
+    const handlePaymentResponse = async () => {
+      // Check for eSewa data parameter (base64 encoded)
+      const esewaData = searchParams.get('data');
+      const transactionUuid = searchParams.get('transaction_uuid');
+      const oid = searchParams.get('oid');
+      const pidx = searchParams.get('pidx');
+      const refId = searchParams.get('refId');
+      const amt = searchParams.get('amt');
+      const error = searchParams.get('error');
       
+      // Check if there are payment-related parameters
+      const hasPaymentDetails = esewaData || transactionUuid || oid || pidx || refId || amt || error;
+      
+      if (error) {
+        let errorMessage = "Payment was canceled or failed. Please try again.";
+        switch (error) {
+          case 'user_canceled':
+            errorMessage = "Payment was canceled by user. Please try again.";
+            break;
+          case 'timeout':
+            errorMessage = "Payment timed out. Please try again.";
+            break;
+          case 'invalid_amount':
+            errorMessage = "Invalid payment amount. Please refresh and try again.";
+            break;
+          case 'payment_failed':
+            errorMessage = "Payment processing failed. Please try again.";
+            break;
+          default:
+            errorMessage = `Payment failed: ${error}`;
+        }
+        
+        setPaymentError(errorMessage);
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+      
+      // If no payment details, don't process
+      if (!hasPaymentDetails) {
+        return;
+      }
+      
+      // Set processing state
+      setIsProcessingPayment(true);
+      
+      try {
+        // Get order data from session storage
+        const orderDataStr = sessionStorage.getItem('orderData');
+        if (!orderDataStr) {
+          throw new Error('Order data not found. Please try placing the order again.');
+        }
+        
+        const orderData = JSON.parse(orderDataStr);
+        
+        // Validate order data
+        if (!orderData.items || orderData.items.length === 0) {
+          throw new Error('Invalid order data. Please try again.');
+        }
+        
+        if (!orderData.total || orderData.total <= 0) {
+          throw new Error('Invalid order total. Please try again.');
+        }
+        
+        // Prepare payment details based on payment method
+        let paymentDetails;
+        
+        if (esewaData) {
+          // eSewa payment with base64 encoded data
+          try {
+            const decodedData = JSON.parse(atob(esewaData));
+            paymentDetails = {
+              transactionId: decodedData.transaction_uuid || transactionUuid,
+              provider: 'esewa',
+              amount: parseFloat(decodedData.total_amount || amt || '0'),
+              refId: decodedData.transaction_code || decodedData.transaction_uuid
+            };
+          } catch (decodeError) {
+            console.error('Failed to decode eSewa data:', decodeError);
+            throw new Error('Invalid eSewa payment data');
+          }
+        } else if (oid) {
+          // eSewa payment (legacy format)
+          paymentDetails = {
+            transactionId: oid,
+            provider: 'esewa',
+            amount: parseFloat(amt || '0'),
+            refId: refId
+          };
+        } else if (pidx) {
+          // Khalti payment
+          paymentDetails = {
+            transactionId: pidx,
+            provider: 'khalti',
+            amount: parseFloat(amt || '0'),
+            refId: refId
+          };
+        } else {
+          // Fallback
+          paymentDetails = {
+            transactionId: transactionUuid || refId || 'unknown',
+            provider: 'unknown',
+            amount: parseFloat(amt || '0'),
+            refId: refId || transactionUuid
+          };
+        }
+        
+        // Validate payment details
+        if (!paymentDetails.transactionId) {
+          throw new Error('Missing transaction ID. Payment verification failed.');
+        }
+        
+        if (!paymentDetails.provider || paymentDetails.provider === 'unknown') {
+          throw new Error('Unknown payment provider. Payment verification failed.');
+        }
+        
+        // Complete the order
+        const response = await fetch('/api/payment/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderData,
+            paymentDetails
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Server error' }));
+          throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Set order details for success modal
+          setOrderDetails({
+            id: result.orderId || result.order?.id,
+            orderNumber: result.orderNumber || result.order?.orderNumber,
+            status: result.status || result.order?.status || 'confirmed',
+            paymentStatus: result.paymentStatus || result.order?.paymentStatus || 'completed',
+            total: result.total || result.order?.total,
+            referenceId: paymentDetails.refId
+          });
+          setShowSuccessModal(true);
+          dispatch(clearCart());
+          sessionStorage.removeItem('orderData');
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          throw new Error(result.message || 'Order creation failed');
+        }
+      } catch (err) {
+        console.error('Payment processing error:', err);
+        
+        // Set appropriate error message
+        let errorMessage = "Failed to process payment. Please contact support.";
+        
+        if (err instanceof Error) {
+          if (err.message.includes('network') || err.message.includes('fetch')) {
+            errorMessage = "Network error. Please check your connection and try again.";
+          } else if (err.message.includes('session') || err.message.includes('auth')) {
+            errorMessage = "Session expired. Please refresh the page and try again.";
+          } else if (err.message.includes('Order data not found')) {
+            errorMessage = "Order session expired. Please try placing the order again.";
+          } else if (err.message.includes('Server error: 5')) {
+            errorMessage = "Server error. Please try again or contact support.";
+          } else if (err.message.includes('Server error: 4')) {
+            errorMessage = "Invalid request. Please refresh the page and try again.";
+          } else {
+            errorMessage = err.message;
+          }
+        }
+        
+        setPaymentError(errorMessage);
+      } finally {
+        setIsProcessingPayment(false);
+      }
+    };
+
+    handlePaymentResponse();
+  }, [searchParams, dispatch]);
+
+  const handleApplyDiscount = async () => {
+    setDiscountError("");
+    
+    try {
+      // Validate discount code
       const result = await validateDiscount({
         code: discountCode,
         cartTotal: subtotal,
@@ -127,18 +352,24 @@ export default function CheckoutPage() {
       }).unwrap();
 
       if (result.valid && result.discount) {
-        setDiscount(result.discount as Discount);
-        toast.success("Discount applied successfully!");
+        setDiscount({
+          _id: result.discount.id,
+          code: result.discount.code,
+          type: result.discount.type,
+          value: result.discount.value,
+          discountAmount: result.discount.discountAmount
+        });
+        
+        toast.success(`Discount applied: ${result.discount.code}`);
         setDiscountCode("");
-        setDiscountError("");
       } else {
-        setDiscountError(result.message || "Invalid discount code");
-        setDiscount(null);
+        setDiscountError("Invalid or expired discount code");
+        toast.error("Invalid or expired discount code");
       }
     } catch (error: any) {
-      console.error("Error applying discount:", error);
-      setDiscountError(error?.data?.error || "Failed to apply discount. Please try again.");
-      setDiscount(null);
+      const errorMessage = error?.data?.message || "Failed to apply discount";
+      setDiscountError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -150,107 +381,152 @@ export default function CheckoutPage() {
 
   const handleCheckout = async () => {
     if (!selectedAddress) {
-      toast.error("Address Required", {
-        description: "Please select a delivery address",
-      });
+      toast.error("Please select a delivery address");
       return;
     }
 
     if (!paymentMethod) {
-      toast.error("Payment method Required");
+      toast.error("Please select a payment method");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error("Your cart is empty");
+      return;
+    }
+
+    // Validate cart items
+    const invalidItems = cartItems.filter(item => !item.id || !item.name || item.price <= 0 || item.quantity <= 0);
+    if (invalidItems.length > 0) {
+      toast.error("Some items in your cart are invalid. Please refresh and try again.");
+      return;
+    }
+
+    // Validate total
+    if (total <= 0) {
+      toast.error("Invalid order total. Please refresh and try again.");
       return;
     }
 
     try {
-      // For COD, create order directly
-      if (paymentMethod === "cod") {
-        const orderResult = await createOrder({
-          addressId: selectedAddress,
-          paymentMethod,
-          items: cartItems.map((item) => ({
-            productId: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            image: item.image
-          })),
-          subtotal,
-          shipping,
-          discount: discount
-            ? {
-              id: discount._id,
-              code: discount.code,
-              amount: discount.discountAmount,
-            }
-            : null,
-          total,
-        }).unwrap();
-
-        // Apply discount if used
-        if (discount) {
-          try {
-            await applyDiscount({
-              discountId: discount._id,
-            }).unwrap();
-          } catch (discountError) {
-            console.warn("Failed to apply discount usage:", discountError);
-          }
-        }
-
-        // Clear cart
-        dispatch(clearCart());
-
-        // Redirect to success page
-        router.push(`/checkout/success?orderId=${orderResult.orderId}`);
-        toast.success("Order placed successfully!");
-        return;
-      }
-
-      // For online payments (eSewa, Khalti), store order data in sessionStorage
-      // and initiate payment first
+      // Prepare order data
       const orderData = {
         addressId: selectedAddress,
         paymentMethod,
         items: cartItems.map((item) => ({
           productId: item.id,
-          name: item.name,
           quantity: item.quantity,
-          price: item.price,
-          image: item.image
+          price: item.price
         })),
         subtotal,
         shipping,
+        total,
         discount: discount
           ? {
-            id: discount._id,
-            code: discount.code,
-            amount: discount.discountAmount,
-          }
-          : null,
-        total,
+              id: discount._id,
+              code: discount.code,
+              amount: discount.discountAmount
+            }
+          : undefined
       };
 
-      // Store order data for payment completion
+      // For COD orders, create order immediately
+      if (paymentMethod === "cod") {
+        const orderResult = await createOrder(orderData).unwrap();
+        
+        // Apply discount if present
+        if (discount) {
+          try {
+            await applyDiscount({
+              discountId: discount._id
+            }).unwrap();
+          } catch (discountError) {
+            console.warn("Failed to apply discount:", discountError);
+          }
+        }
+        
+        // Show success modal
+        setOrderDetails({
+          id: orderResult.orderId,
+          orderNumber: orderResult.orderNumber || `ORD-${orderResult.orderId}`,
+          status: 'confirmed',
+          paymentStatus: 'pending',
+          total: total
+        });
+        setShowSuccessModal(true);
+        dispatch(clearCart());
+        return;
+      }
+
+      // For online payments, store order data and initiate payment
       sessionStorage.setItem('orderData', JSON.stringify(orderData));
       
-      // Clear cart before payment
-      dispatch(clearCart());
-      
-      // Initiate payment through PaymentMethods component
-      if (window.initiatePayment) {
-        window.initiatePayment(paymentMethod);
-      } else {
+      // Initiate payment
+      try {
+        toast.success("Redirecting to payment gateway...");
+        if (typeof (window as any).initiatePayment === 'function') {
+          (window as any).initiatePayment(paymentMethod, total, orderData);
+          toast.success("Redirecting to payment gateway...");
+        } else {
+          throw new Error("Payment system not ready");
+        }
+      } catch (error) {
+        console.error("Payment initiation error:", error);
         toast.error("Payment system not ready. Please try again.");
+        // Remove order data if payment initiation fails
+        sessionStorage.removeItem('orderData');
       }
       
     } catch (error: any) {
       console.error("Error processing checkout:", error);
-      toast.error(error?.data?.message || "Failed to process checkout. Please try again.");
+      
+      // Provide specific error messages based on error type
+      let errorMessage = "Failed to process checkout. Please try again.";
+      
+      if (error?.message?.includes("network") || error?.message?.includes("fetch")) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error?.message?.includes("session") || error?.message?.includes("auth")) {
+        errorMessage = "Session expired. Please refresh the page and try again.";
+      } else if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+      
+      // Clean up session storage if there was an error
+      if (paymentMethod !== "cod") {
+        sessionStorage.removeItem('orderData');
+      }
     }
   };
 
   const handlePaymentInitiation = () => {
-    if (paymentMethod === "esewa" || paymentMethod === "khalti") {
+    if (paymentMethod === "esewa") {
+      // Import and call eSewa payment function directly
+      import('@/lib/payment/esewa').then(({ initiateEsewaPayment }) => {
+        const orderData = JSON.parse(sessionStorage.getItem('orderData') || '{}');
+        initiateEsewaPayment({
+          amount: total,
+          orderData
+        });
+      });
+    } else if (paymentMethod === "khalti") {
+      // Import and call Khalti payment function directly
+      import('@/lib/payment/khalti').then(({ initiateKhaltiPayment }) => {
+        const orderData = JSON.parse(sessionStorage.getItem('orderData') || '{}');
+        const orderId = `ORDER_${Date.now()}`;
+        
+        initiateKhaltiPayment({
+          amount: total,
+          productId: orderId,
+          productName: `Order Payment`,
+          successUrl: `${window.location.origin}/api/payment/khalti/success`,
+          failureUrl: `${window.location.origin}/api/payment/khalti/failure`,
+        });
+      });
+    } else {
       handleCheckout();
     }
   };
@@ -263,8 +539,69 @@ export default function CheckoutPage() {
     );
   }
 
+  // Show processing modal when handling payment response
+  if (isProcessingPayment) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Processing Your Order</h2>
+          <p className="text-gray-600 mb-4">Please wait while we confirm your payment and create your order...</p>
+          <div className="text-sm text-gray-500">
+            <p>• Verifying payment details</p>
+            <p>• Creating your order</p>
+            <p>• Updating inventory</p>
+          </div>
+          <div className="mt-6 text-xs text-gray-400">
+            Please do not close this window or navigate away.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if payment processing failed
+  if (paymentError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <p className="font-bold">Order Creation Failed</p>
+            <p className="text-sm">{paymentError}</p>
+          </div>
+          <div className="space-y-2">
+            <Button
+              onClick={() => {
+                setPaymentError(null);
+                // Clear any stale session data
+                sessionStorage.removeItem('orderData');
+                window.location.reload();
+              }}
+              className="bg-blue-600 text-white hover:bg-blue-700 w-full"
+            >
+              Try Again
+            </Button>
+            <Button
+              onClick={() => {
+                setPaymentError(null);
+                // Clear any stale session data
+                sessionStorage.removeItem('orderData');
+                // Clear URL parameters
+                window.history.replaceState({}, document.title, window.location.pathname);
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              Continue Shopping
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className=" mx-auto py-8">
+    <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -288,7 +625,7 @@ export default function CheckoutPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {addresses?.map((address) => (
+                  {addresses?.map((address: Address) => (
                     <div
                       key={address._id}
                       className={`p-4 border rounded-lg cursor-pointer ${selectedAddress === address._id
@@ -339,7 +676,7 @@ export default function CheckoutPage() {
                 selectedMethod={paymentMethod}
                 onPaymentMethodChange={(method) => setPaymentMethod(method)}
                 onPaymentComplete={(transactionId) => {
-                  // Handle payment completion
+                  console.log("Payment completed:", transactionId);
                 }}
                 amount={total}
                 onPaymentInitiation={handlePaymentInitiation}
@@ -348,6 +685,7 @@ export default function CheckoutPage() {
           </Card>
         </div>
 
+        {/* Order Summary */}
         <div>
           <Card className="sticky top-6">
             <CardHeader>
@@ -366,7 +704,7 @@ export default function CheckoutPage() {
                         {item.name} x {item.quantity}
                       </span>
                       <span>
-                        Rs. {(item.price * item.quantity).toLocaleString()}
+                        {formatPrice(item.price * item.quantity)}
                       </span>
                     </div>
                   ))}
@@ -420,47 +758,136 @@ export default function CheckoutPage() {
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>Rs. {subtotal.toLocaleString()}</span>
+                  <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
-                  <span>Rs. {shipping.toLocaleString()}</span>
+                  <span>{formatPrice(shipping)}</span>
                 </div>
                 {discount && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Discount</span>
                     <span>
-                      - Rs. {discount?.discountAmount?.toLocaleString()}
+                      - {formatPrice(discount?.discountAmount || 0)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between font-medium pt-2">
                   <span>Total</span>
-                  <span>Rs. {total.toLocaleString()}</span>
+                  <span>{formatPrice(total)}</span>
                 </div>
               </div>
             </CardContent>
             <CardFooter>
               <Button
+                size="lg"
                 className="w-full"
-                onClick={handleCheckout}
+                onClick={paymentMethod === "cod" ? handleCheckout : handlePaymentInitiation}
                 disabled={
                   isCreatingOrder || addresses.length === 0 || !paymentMethod
                 }
               >
                 {isCreatingOrder ? (
-                  <>
+                  <div className="flex items-center justify-center">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
+                    <span>
+                      {paymentMethod === "cod" ? "Creating Order..." : "Preparing Payment..."}
+                    </span>
+                  </div>
                 ) : (
-                  "Complete Order"
+                  <span>
+                    {paymentMethod === "cod" ? "Place Order" : "Proceed to Payment"}
+                  </span>
                 )}
               </Button>
             </CardFooter>
           </Card>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <CheckCircle className="h-16 w-16 text-green-500" />
+            </div>
+            <DialogTitle className="text-center text-2xl">
+              Payment Successful!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Thank you for your purchase. Your order has been confirmed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6">
+            {orderDetails ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center space-x-3">
+                    <Package className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Order Number</p>
+                      <p className="font-semibold">{orderDetails.orderNumber}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <CreditCard className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Payment Method</p>
+                      <p className="font-semibold capitalize">{paymentMethod}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Status</p>
+                      <p className="font-semibold capitalize">{orderDetails.status}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="h-5 w-5 bg-green-500 rounded-full"></div>
+                    <div>
+                      <p className="text-sm text-gray-500">Total Amount</p>
+                      <p className="font-semibold">{formatPrice(orderDetails.total)}</p>
+                    </div>
+                  </div>
+
+                  {orderDetails?.referenceId && (
+                    <div className="flex items-center space-x-3">
+                      <div className="h-5 w-5 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="text-sm text-gray-500">Reference ID</p>
+                        <p className="font-mono text-sm">{orderDetails.referenceId}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-gray-600">Order details will be available shortly.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/dashboard/orders">
+              <Button className="w-full sm:w-auto">
+                View Orders
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button variant="outline" className="w-full sm:w-auto">
+                Continue Shopping
+              </Button>
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

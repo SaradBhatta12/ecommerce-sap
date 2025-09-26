@@ -1,3 +1,7 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -14,20 +18,34 @@ import {
 } from "@/components/ui/card";
 import { getOrDerById } from "@/_actions/_orders";
 import { Order, OrderItem, OrderTimeline } from "@/types";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
-export default async function OrderDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  let order: Order | null = null;
-  console.log(params.id);
+export default function OrderDetailPage() {
+  const params = useParams();
+  const { formatPrice } = useCurrency();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  try {
-    const response = await getOrDerById(params.id);
-    order = response?.order; // fallback if not found
-  } catch (error) {
-    console.error("Failed to fetch order:", error);
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const response = await getOrDerById(params.id as string);
+        setOrder(response?.order || null);
+      } catch (error) {
+        console.error("Failed to fetch order:", error);
+        setOrder(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchOrder();
+    }
+  }, [params.id]);
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   if (!order) {
@@ -133,13 +151,12 @@ export default async function OrderDetailPage({
                       <div>
                         <div className="text-sm font-medium">{item.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          Qty: {item.quantity} x रू{" "}
-                          {item.price.toLocaleString()}
+                          Qty: {item.quantity} x {formatPrice(item.price)}
                         </div>
                       </div>
                     </div>
                     <div className="text-sm font-medium">
-                      रू {(item.price * item.quantity).toLocaleString()}
+                      {formatPrice(item.price * item.quantity)}
                     </div>
                   </div>
                 ))}
@@ -150,15 +167,15 @@ export default async function OrderDetailPage({
               <div className="space-y-1.5">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>रू {order?.subtotal?.toLocaleString()}</span>
+                  <span>{formatPrice(order?.subtotal || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
-                  <span>रू {order?.shipping?.toLocaleString()}</span>
+                  <span>{formatPrice(order?.shipping || 0)}</span>
                 </div>
                 <div className="flex justify-between font-medium">
                   <span>Total</span>
-                  <span>रू {order?.total?.toLocaleString()}</span>
+                  <span>{formatPrice(order?.total || 0)}</span>
                 </div>
               </div>
             </div>

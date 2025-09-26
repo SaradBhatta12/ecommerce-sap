@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useGetCategoriesQuery, useGetBrandsQuery } from "@/store/api/productsApi"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
   function ProductFilters() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [priceRange, setPriceRange] = useState([0, 20000])
+  const { formatPrice } = useCurrency();
+  const [priceRange, setPriceRange] = useState([0, 100000])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [onSale, setOnSale] = useState(false)
@@ -215,9 +217,9 @@ import { useGetCategoriesQuery, useGetBrandsQuery } from "@/store/api/productsAp
                 onValueChange={setPriceRange}
                 className="w-full"
               />
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Rs. {priceRange[0].toLocaleString()}</span>
-                <span className="font-medium">Rs. {priceRange[1].toLocaleString()}</span>
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">{formatPrice(priceRange[0])}</span>
+                <span className="font-medium">{formatPrice(priceRange[1])}</span>
               </div>
             </div>
           </AccordionContent>

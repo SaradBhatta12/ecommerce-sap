@@ -9,6 +9,7 @@ import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import { StoreProvider } from "@/store/provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,19 +31,21 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     >
       <StoreProvider>
         <SessionProvider>
-          {/* Header */}
-          {shouldShowHeaderFooter && <Header />}
+          <CurrencyProvider>
+            {/* Header */}
+            {shouldShowHeaderFooter && <Header />}
 
-          {/* Main Content */}
-          <main className="flex-1">
-            {children}
-          </main>
+            {/* Main Content */}
+            <main className="flex-1">
+              {children}
+            </main>
 
-          {/* Footer */}
-          {shouldShowHeaderFooter && <Footer />}
+            {/* Footer */}
+            {shouldShowHeaderFooter && <Footer />}
 
-          {/* Toast Notifications */}
-          <Toaster richColors closeButton position="top-right" />
+            {/* Toast Notifications */}
+            <Toaster richColors closeButton position="top-right" />
+          </CurrencyProvider>
         </SessionProvider>
       </StoreProvider>
     </ThemeProvider>

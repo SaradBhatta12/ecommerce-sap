@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -42,13 +43,19 @@ import {
   MoreHorizontal,
   UserCheck,
   UserX,
+  Download,
+  RefreshCw,
+  Edit,
+  Trash2,
   DollarSign,
   ShoppingCart,
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 import CustomerDetailsModal from "@/components/admin/customer-details-modal";
-import { formatNPR } from "@/lib/currency";
+import { formatNPR } from "@/lib/utils";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Customer {
   _id: string;
@@ -110,6 +117,7 @@ export default function CustomersPage() {
     totalOrders: 0,
     totalRevenue: 0,
   });
+  const { formatPrice } = useCurrency();
 
   // Fetch stats
   const fetchStats = async () => {
@@ -208,7 +216,7 @@ export default function CustomersPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return formatNPR(amount);
+    return formatPrice(amount);
   };
 
   const getStatusBadge = (role: string, userType: string) => {
@@ -277,7 +285,7 @@ export default function CustomersPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNPR(stats.totalRevenue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               Revenue from all orders
             </p>

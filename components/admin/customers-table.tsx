@@ -60,6 +60,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { formatNPR, formatPrice } from "@/lib/utils";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 export interface Customer {
   _id: string;
@@ -133,6 +135,7 @@ export default function CustomersTable({
 }: CustomersTableProps) {
   const [searchTerm, setSearchTerm] = useState(filters.search || "");
   const [showFilters, setShowFilters] = useState(false);
+  const { formatPrice } = useCurrency();
 
   // Debounced search
   useEffect(() => {
@@ -166,7 +169,7 @@ export default function CustomersTable({
   };
 
   const formatCurrency = (amount: number) => {
-    return formatNPR(amount);
+    return formatPrice(amount);
   };
 
   const CustomerCard = ({ customer }: { customer: Customer }) => (

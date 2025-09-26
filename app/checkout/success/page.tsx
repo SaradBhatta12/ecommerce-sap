@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Package, CreditCard, Calendar } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface OrderDetails {
   id: string;
@@ -18,8 +19,9 @@ export default function CheckoutSuccessPage() {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { formatPrice } = useCurrency();
 
-  const paymentMethod = searchParams.get('payment_method');
+  const paymentMethod = searchParams.get('payment_method')?.split('?')[0]; // Remove query parameters from payment method
   const transactionId = searchParams.get('transaction_id');
   const refId = searchParams.get('ref_id');
   const amount = searchParams.get('amount');
@@ -28,8 +30,10 @@ export default function CheckoutSuccessPage() {
   useEffect(() => {
     const createOrder = async () => {
       try {
-        // Always try to create order if we have payment details
-        const hasPaymentDetails = transactionId || searchParams.get('oid') || searchParams.get('pidx');
+        // Check for eSewa data parameter (base64 encoded)
+        const esewaData = searchParams.get('data');
+        const transactionUuid = searchParams.get('transaction_uuid');
+        const hasPaymentDetails = transactionId || searchParams.get('oid') || searchParams.get('pidx') || esewaData || transactionUuid;
         
         if (!hasPaymentDetails) {
           setLoading(false);
@@ -46,8 +50,23 @@ export default function CheckoutSuccessPage() {
 
         // Prepare payment details based on the payment method
         let paymentDetails;
-        if (searchParams.get('oid')) {
-          // eSewa payment
+        
+        if (esewaData && paymentMethod === 'esewa') {
+          // eSewa payment with base64 encoded data
+          try {
+            const decodedData = JSON.parse(atob(esewaData));
+            paymentDetails = {
+              transactionId: decodedData.transaction_uuid || transactionUuid,
+              provider: 'esewa',
+              amount: parseFloat(decodedData.total_amount || '0'),
+              refId: decodedData.transaction_code || decodedData.transaction_uuid,
+            };
+          } catch (decodeError) {
+            console.error('Failed to decode eSewa data:', decodeError);
+            throw new Error('Invalid eSewa payment data');
+          }
+        } else if (searchParams.get('oid')) {
+          // eSewa payment (legacy format)
           paymentDetails = {
             transactionId: searchParams.get('oid'),
             provider: 'esewa',
@@ -65,12 +84,16 @@ export default function CheckoutSuccessPage() {
         } else {
           // Fallback to existing method
           paymentDetails = {
-            transactionId: transactionId || '',
-            provider: paymentMethod || '',
+            transactionId: transactionId || transactionUuid || '',
+            provider: paymentMethod || 'esewa', // Default to esewa if no payment method
             amount: parseFloat(amount || '0'),
             refId: refId || '',
           };
         }
+
+        // Debug: Log payment details being sent
+        console.log('Payment details being sent:', paymentDetails);
+        console.log('Order data being sent:', orderData);
 
         // Create order via API
         const response = await fetch('/api/payment/complete', {
@@ -83,11 +106,19 @@ export default function CheckoutSuccessPage() {
             paymentDetails,
           }),
         });
-
+console.log(response)
         const result = await response.json();
 
         if (result.success) {
-          setOrderDetails(result.order);
+          // Handle the new response structure with flat properties
+          const orderData = {
+            id: result.orderId || result.order?.id || '',
+            orderNumber: result.orderNumber || result.order?.orderNumber || '',
+            status: result.status || result.order?.status || 'pending',
+            paymentStatus: result.paymentStatus || result.order?.paymentStatus || 'pending',
+            total: result.total || result.order?.total || 0,
+          };
+          setOrderDetails(orderData);
           // Clear session storage after successful order creation
           sessionStorage.removeItem('orderData');
         } else {
@@ -95,14 +126,33 @@ export default function CheckoutSuccessPage() {
         }
       } catch (err) {
         console.error('Error creating order:', err);
-        setError(err instanceof Error ? err.message : 'Failed to create order');
+        let errorMessage = 'Failed to create order';
+        
+        // Handle different types of errors
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        } else if (typeof err === 'string') {
+          errorMessage = err;
+        }
+        
+        // Handle network errors
+        if (errorMessage.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        }
+        
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
 
-    createOrder();
-  }, [transactionId, paymentMethod, refId, amount, searchParams]);
+    // Only create order if we have payment details or if explicitly requested
+    if (shouldCreateOrder || transactionId || searchParams.get('oid') || searchParams.get('pidx') || searchParams.get('data') || searchParams.get('transaction_uuid')) {
+      createOrder();
+    } else {
+      setLoading(false);
+    }
+  }, [transactionId, paymentMethod, refId, amount, searchParams, shouldCreateOrder]);
 
   if (loading) {
     return (
@@ -174,7 +224,7 @@ export default function CheckoutSuccessPage() {
                     <Calendar className="h-5 w-5 text-gray-400" />
                     <div>
                       <p className="text-sm text-gray-500">Transaction ID</p>
-                      <p className="font-semibold">{transactionId}</p>
+                      <p className="font-semibold">{transactionId || searchParams.get('oid') || searchParams.get('pidx') || searchParams.get('transaction_uuid') || 'N/A'}</p>
                     </div>
                   </div>
                   
@@ -182,39 +232,61 @@ export default function CheckoutSuccessPage() {
                     <div className="h-5 w-5 bg-green-500 rounded-full"></div>
                     <div>
                       <p className="text-sm text-gray-500">Total Amount</p>
-                      <p className="font-semibold">Rs. {orderDetails.total}</p>
+                      <p className="font-semibold">{formatPrice(orderDetails.total)}</p>
                     </div>
                   </div>
                 </div>
 
-                {refId && (
+                {(refId || searchParams.get('ref_id')) && (
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Reference ID</p>
-                    <p className="font-mono text-sm">{refId}</p>
+                    <p className="font-mono text-sm">{refId || searchParams.get('ref_id')}</p>
                   </div>
                 )}
+
+                {/* Payment Status Indicator */}
+                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <div>
+                      <p className="text-sm font-medium text-green-800">Payment Status</p>
+                      <p className="text-sm text-green-600 capitalize">{orderDetails.paymentStatus}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Payment Method</p>
-                    <p className="font-semibold capitalize">{paymentMethod}</p>
+                    <p className="font-semibold capitalize">{paymentMethod || 'Unknown'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Transaction ID</p>
-                    <p className="font-semibold">{transactionId}</p>
+                    <p className="font-semibold">{transactionId || searchParams.get('oid') || searchParams.get('pidx') || searchParams.get('transaction_uuid') || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Amount</p>
-                    <p className="font-semibold">Rs. {amount}</p>
+                    <p className="font-semibold">{formatPrice(parseFloat(amount || '0'))}</p>
                   </div>
-                  {refId && (
+                  {(refId || searchParams.get('ref_id')) && (
                     <div>
                       <p className="text-sm text-gray-500">Reference ID</p>
-                      <p className="font-semibold">{refId}</p>
+                      <p className="font-semibold">{refId || searchParams.get('ref_id')}</p>
                     </div>
                   )}
+                </div>
+
+                {/* Warning for incomplete order */}
+                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="h-5 w-5 bg-yellow-500 rounded-full mr-2"></div>
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800">Payment Received</p>
+                      <p className="text-sm text-yellow-600">Your payment was successful, but order details are being processed.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

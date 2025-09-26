@@ -411,17 +411,17 @@ export async function getPerformanceMetrics(period: string = "30d") {
     const current = currentPeriod[0] || { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 };
     const previous = previousPeriod[0] || { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 };
 
-    // Calculate percentage changes
-    const revenueChange = previous.totalRevenue > 0 
-      ? ((current.totalRevenue - previous.totalRevenue) / previous.totalRevenue) * 100 
+    // Calculate percentage changes with proper validation and rounding
+    const revenueChange = previous.totalRevenue > 0 && typeof previous.totalRevenue === 'number' && !isNaN(previous.totalRevenue)
+      ? Math.round(((current.totalRevenue - previous.totalRevenue) / previous.totalRevenue) * 100 * 100) / 100
       : 0;
 
-    const ordersChange = previous.totalOrders > 0 
-      ? ((current.totalOrders - previous.totalOrders) / previous.totalOrders) * 100 
+    const ordersChange = previous.totalOrders > 0 && typeof previous.totalOrders === 'number' && !isNaN(previous.totalOrders)
+      ? Math.round(((current.totalOrders - previous.totalOrders) / previous.totalOrders) * 100 * 100) / 100
       : 0;
 
-    const avgOrderChange = previous.avgOrderValue > 0 
-      ? ((current.avgOrderValue - previous.avgOrderValue) / previous.avgOrderValue) * 100 
+    const avgOrderChange = previous.avgOrderValue > 0 && typeof previous.avgOrderValue === 'number' && !isNaN(previous.avgOrderValue)
+      ? Math.round(((current.avgOrderValue - previous.avgOrderValue) / previous.avgOrderValue) * 100 * 100) / 100
       : 0;
 
     return {

@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useGetUserOrdersQuery, useGetWishlistQuery, useGetUserAddressesQuery } from "@/store";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface DashboardStats {
   totalOrders: number;
@@ -43,6 +44,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
+  const { formatPrice } = useCurrency();
   const [stats, setStats] = useState<DashboardStats>({
     totalOrders: 0,
     totalSpent: 0,
@@ -187,7 +189,7 @@ export default function DashboardPage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">Rs. {stats.totalSpent.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{formatPrice(stats.totalSpent)}</div>
                 <p className="text-xs text-muted-foreground">
                   {stats.totalSpent === 0 ? "Start shopping today" : "Lifetime spending"}
                 </p>
@@ -259,7 +261,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium text-sm">Rs. {order.total?.toLocaleString()}</p>
+                          <p className="font-medium text-sm">{formatPrice(order.total || 0)}</p>
                           <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'} className="text-xs">
                             {order.status}
                           </Badge>
@@ -302,7 +304,7 @@ export default function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{item.product?.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Rs. {item.product?.price?.toLocaleString()}
+                            {formatPrice(item.product?.price || 0)}
                           </p>
                         </div>
                       </div>
@@ -348,7 +350,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">Rs. {order.total?.toLocaleString()}</p>
+                        <p className="font-medium">{formatPrice(order.total || 0)}</p>
                         <Badge variant={order.status === 'delivered' ? 'default' : order.status === 'processing' ? 'secondary' : 'outline'}>
                           {order.status}
                         </Badge>
@@ -396,8 +398,8 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.product?.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Rs. {item.product?.price?.toLocaleString()}
-                        </p>
+                            {formatPrice(item.product?.price || 0)}
+                          </p>
                         <p className="text-xs text-muted-foreground">
                           Added {new Date(item.createdAt).toLocaleDateString()}
                         </p>

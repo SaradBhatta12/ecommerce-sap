@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 interface Category {
   _id: string;
@@ -37,6 +38,7 @@ interface Category {
 export default function ShopPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { formatPrice } = useCurrency();
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -250,8 +252,8 @@ export default function ShopPage() {
                         className="mb-4"
                       />
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>₹{priceRange[0]}</span>
-                        <span>₹{priceRange[1]}</span>
+                        <span>{formatPrice(priceRange[0])}</span>
+                        <span>{formatPrice(priceRange[1])}</span>
                       </div>
                       <Button 
                         onClick={handlePriceFilter} 
@@ -355,7 +357,7 @@ export default function ShopPage() {
               )}
               {(currentMinPrice || currentMaxPrice) && (
                 <Badge variant="secondary" className="px-3 py-1">
-                  Price: ₹{currentMinPrice || 0} - ₹{currentMaxPrice || '10000+'}
+                  Price: {formatPrice(parseInt(currentMinPrice || '0'))} - {formatPrice(parseInt(currentMaxPrice || '10000'))}
                 </Badge>
               )}
             </div>
