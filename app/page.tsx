@@ -23,6 +23,7 @@ async function getHomePageData(): Promise<HomePageData | null> {
       cache: 'no-store', // Ensure fresh data
     });
 
+
     if (!res.ok) {
       console.error('Failed to fetch home page data');
       return null;

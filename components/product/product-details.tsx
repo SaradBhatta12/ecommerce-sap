@@ -70,7 +70,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const [removeFromWishlist, { isLoading: isRemovingFromWishlist }] = useRemoveFromWishlistMutation()
 
   // Check if product is in wishlist
-  const isInWishlist = wishlistData?.wishlist?.some((item: WishlistItem) => item.product._id === product._id) || false
+  const isInWishlist = wishlistData?.some((item: WishlistItem) => item.product._id === product._id) || false
   const isWishlistLoading = isAddingToWishlist || isRemovingFromWishlist
 
   const handleAddToCart = () => {

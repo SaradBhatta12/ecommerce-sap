@@ -242,9 +242,9 @@ export function AdminSidebar() {
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-sm">E</span>
+              <span className="text-white font-bold text-sm">N</span>
             </div>
-            <h2 className={cn("text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent", textClass)}>Ecommerce Pro</h2>
+            <h2 className={cn("text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent", textClass)}>Naya Bazar</h2>
           </div>
         )}
         <Button

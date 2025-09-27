@@ -124,17 +124,22 @@ export default function WishlistPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {wishlistItems.map((item: any) => (
-          <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+          <Card key={item._id} className="overflow-hidden hover:shadow-lg transition-shadow">
             <div className="relative aspect-square">
               <Image
-                src={item.product.images[0] || "/placeholder.jpg"}
+                src={item.product.images?.[0] || "/placeholder.jpg"}
                 alt={item.product.name}
                 fill
                 className="object-cover"
               />
-              {item.product.salePrice && (
+              {item.product.isOnSale && (
                 <Badge className="absolute top-2 left-2 bg-red-500">
-                  Sale
+                  {item.product.discount}% Off
+                </Badge>
+              )}
+              {!item.product.inStock && (
+                <Badge className="absolute top-2 right-2 bg-gray-500">
+                  Out of Stock
                 </Badge>
               )}
             </div>
@@ -142,33 +147,49 @@ export default function WishlistPage() {
               <h3 className="font-semibold mb-2 line-clamp-2">{item.product.name}</h3>
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-bold text-lg">
-                  {formatPrice(item.product.salePrice || item.product.price)}
+                  {formatPrice(item.product.discountPrice || item.product.originalPrice)}
                 </span>
-                {item.product.salePrice && (
+                {item.product.discountPrice && (
                   <span className="text-sm text-muted-foreground line-through">
-                    {formatPrice(item.product.price)}
+                    {formatPrice(item.product.originalPrice)}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1 mb-4">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              <div className="flex items-center gap-1 mb-2">
+                <div className="flex items-center">
+                  {[...Array(5)].map((_, i) => (
+                    <Star 
+                      key={i} 
+                      className={`h-4 w-4 ${
+                        i < Math.floor(item.product.rating || 0) 
+                          ? 'fill-yellow-400 text-yellow-400' 
+                          : 'text-gray-300'
+                      }`} 
+                    />
+                  ))}
+                </div>
                 <span className="text-sm text-muted-foreground">
-                  {item.product.category.name}
+                  ({item.product.reviewCount || 0})
+                </span>
+              </div>
+              <div className="mb-4">
+                <span className="text-sm text-muted-foreground">
+                  {item.product.category} • {item.product.brand}
                 </span>
               </div>
               <div className="flex gap-2">
                 <Button 
                   size="sm" 
                   className="flex-1"
-                  disabled={item.product.stock === 0}
+                  disabled={!item.product.inStock}
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  {item.product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                  {!item.product.inStock ? 'Out of Stock' : 'Add to Cart'}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleRemoveFromWishlist(item.product.id)}
+                  onClick={() => handleRemoveFromWishlist(item.product._id)}
                   disabled={isRemoving}
                 >
                   <Trash2 className="h-4 w-4" />

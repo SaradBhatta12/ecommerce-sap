@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import dbConnect from "@/lib/db-connect"
 import Wishlist from "@/models/wishlist"
+import mongoose from "mongoose"
 
 // Clear user's wishlist
 export async function DELETE() {
@@ -15,9 +16,12 @@ export async function DELETE() {
 
     await dbConnect()
 
-    await Wishlist.deleteMany({ user: session.user.id as string })
+    const result = await Wishlist.deleteMany({ user: new mongoose.Types.ObjectId(session.user.id as string) })
 
-    return NextResponse.json({ message: "Wishlist cleared successfully" })
+    return NextResponse.json({ 
+      message: "Wishlist cleared successfully",
+      deletedCount: result.deletedCount
+    })
   } catch (error) {
     console.error("Error clearing wishlist:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

@@ -98,25 +98,25 @@ interface UpdateAddressRequest {
 }
 
 interface WishlistItem {
-  id: string
+  _id: string
   product: {
-    id: string
+    _id: string
     name: string
     slug: string
     price: number
-    salePrice?: number
+    originalPrice?: number
+    discountPrice?: number
     images: string[]
+    category: string
+    brand: string
+    inStock: boolean
     stock: number
-    category: {
-      toLowerCase(): unknown
-      toLowerCase(): unknown
-      id: string
-      name: string
-    }
-    brand: {
-      id: string
-      name: string
-    }
+    rating: number
+    reviewCount: number
+    description: string
+    tags: string[]
+    isOnSale: boolean
+    discount: number
   }
   addedAt: string
 }
@@ -228,30 +228,59 @@ const userApi = createApi({
       providesTags: ['Wishlist'],
     }),
 
-    addToWishlist: builder.mutation<{ message: string }, AddToWishlistRequest>({
+    checkWishlistItem: builder.query<{ isInWishlist: boolean; wishlistItemId?: string }, string>({
+      query: (productId) => `wishlist/check?productId=${productId}`,
+      providesTags: (result, error, productId) => [{ type: 'Wishlist', id: productId }],
+    }),
+
+    addToWishlist: builder.mutation<{ message: string; item?: any }, AddToWishlistRequest>({
       query: (data) => ({
         url: 'wishlist',
         method: 'POST',
         body: data,
       }),
       invalidatesTags: ['Wishlist'],
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          // Optionally show success toast here
+        } catch (error) {
+          // Handle error
+        }
+      },
     }),
 
-    removeFromWishlist: builder.mutation<{ message: string }, RemoveFromWishlistRequest>({
+    removeFromWishlist: builder.mutation<{ message: string; removedItem?: any }, RemoveFromWishlistRequest>({
       query: (data) => ({
         url: 'wishlist',
         method: 'DELETE',
         body: data,
       }),
       invalidatesTags: ['Wishlist'],
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          // Optionally show success toast here
+        } catch (error) {
+          // Handle error
+        }
+      },
     }),
 
-    clearWishlist: builder.mutation<{ message: string }, void>({
+    clearWishlist: builder.mutation<{ message: string; deletedCount?: number }, void>({
       query: () => ({
         url: 'wishlist/clear',
         method: 'DELETE',
       }),
       invalidatesTags: ['Wishlist'],
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled
+          // Optionally show success toast here
+        } catch (error) {
+          // Handle error
+        }
+      },
     }),
 
     // Notification preferences endpoints
@@ -286,6 +315,7 @@ export const {
   useUpdateUserAddressMutation,
   useDeleteUserAddressMutation,
   useGetWishlistQuery,
+  useCheckWishlistItemQuery,
   useAddToWishlistMutation,
   useRemoveFromWishlistMutation,
   useClearWishlistMutation,
