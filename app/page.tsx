@@ -18,11 +18,11 @@ interface HomePageData {
 
 async function getHomePageData(): Promise<HomePageData | null> {
   try {
+    // During static generation, we need an absolute URL
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const res = await fetch(`${baseUrl}/api/home`, {
-      cache: 'no-store', // Ensure fresh data
+      next: { revalidate: 3600 }, // Revalidate every hour instead of no-store
     });
-
 
     if (!res.ok) {
       console.error('Failed to fetch home page data');

@@ -31,7 +31,7 @@ export interface IOrder extends Document {
     referenceId?: string;
     metadata?: any;
   };
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "handover_to_courier";
   subtotal: number;
   shipping: number;
   discount?: {
@@ -129,7 +129,7 @@ const orderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "processing", "shipped", "handover_to_courier", "delivered", "cancelled"],
       default: "pending",
     },
     subtotal: {

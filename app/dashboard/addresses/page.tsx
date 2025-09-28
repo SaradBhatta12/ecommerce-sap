@@ -65,6 +65,9 @@ async function getAddresses(): Promise<Address[]> {
   }
 }
 
+// This page requires dynamic rendering due to user-specific data
+export const dynamic = 'force-dynamic';
+
 export default async function AddressesPage() {
   const addresses = await getAddresses();
 
