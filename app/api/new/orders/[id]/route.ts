@@ -23,6 +23,7 @@ export async function GET(
 
     const isAuthenticated = await getServerSession(authOptions as any);
     if (!isAuthenticated) {
+      return NextResponse.json(
         {
           success: false,
           message: "Unauthorized",

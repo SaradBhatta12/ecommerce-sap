@@ -194,16 +194,16 @@ export function AdminSidebar() {
   ];
 
   // Enhanced theming variables with modern gradients and effects
-  const sidebarBgClass = theme === "dark" 
-    ? "bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 backdrop-blur-xl" 
+  const sidebarBgClass = theme === "dark"
+    ? "bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 backdrop-blur-xl"
     : "bg-gradient-to-b from-white via-gray-50 to-white backdrop-blur-xl shadow-xl";
   const textClass = theme === "dark" ? "text-white" : "text-gray-800";
   const subTextClass = theme === "dark" ? "text-gray-400" : "text-gray-500";
-  const borderClass = theme === "dark" 
-    ? "border-slate-700/50 shadow-lg" 
+  const borderClass = theme === "dark"
+    ? "border-slate-700/50 shadow-lg"
     : "border-gray-200/50 shadow-sm";
-  const activeBgClass = theme === "dark" 
-    ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg transform scale-105" 
+  const activeBgClass = theme === "dark"
+    ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg transform scale-105"
     : "bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md transform scale-105";
   const inactiveTextClass =
     theme === "dark" ? "text-gray-400" : "text-gray-600";
@@ -211,8 +211,8 @@ export function AdminSidebar() {
     theme === "dark"
       ? "hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 hover:text-white hover:shadow-lg hover:transform hover:scale-102 transition-all duration-300"
       : "hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 hover:text-gray-900 hover:shadow-md hover:transform hover:scale-102 transition-all duration-300";
-  const userAvatarBgClass = theme === "dark" 
-    ? "bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg" 
+  const userAvatarBgClass = theme === "dark"
+    ? "bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg"
     : "bg-gradient-to-br from-blue-100 to-indigo-100 shadow-md";
   const mobileButtonBgClass = theme === "dark" ? "bg-slate-800" : "bg-gray-100";
   const mobileButtonTextClass =
@@ -307,65 +307,7 @@ export function AdminSidebar() {
           </TooltipProvider>
         </ul>
       </nav>
-      <div
-        className={cn(
-          "border-t transition-all",
-          borderClass,
-          isCollapsed ? "p-2" : "p-4"
-        )}
-      >
-        {isCollapsed ? (
-          <div className="flex justify-center">
-            <div
-              className={cn(
-                `h-10 w-10 rounded-full ${userAvatarBgClass} flex items-center justify-center ring-2 ring-white/20`
-              )}
-              style={{
-                backgroundImage: 'url("https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
-              <span className={cn("text-sm font-medium text-white", !theme ? "text-gray-800" : "")}>A</span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                `h-10 w-10 rounded-full ${userAvatarBgClass} flex items-center justify-center ring-2 ring-white/20`
-              )}
-              style={{
-                backgroundImage: 'url("https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
-              <span className={cn("text-sm font-medium text-white", !theme ? "text-gray-800" : "")}>A</span>
-            </div>
-            <div className="flex-1">
-              <p className={cn("text-sm font-medium", textClass)}>Admin User</p>
-              <p className={cn("text-xs", subTextClass)}>admin@ecommerce.com</p>
-              <div className="flex items-center gap-1 mt-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className={cn("text-xs", subTextClass)}>Online</span>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-auto h-8 w-8"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4 text-yellow-400" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
+
     </div>
   );
 
@@ -517,53 +459,7 @@ export function AdminSidebar() {
                 isCollapsed ? "p-2" : "p-4"
               )}
             >
-              {isCollapsed ? (
-                <div className="flex justify-center">
-                  <div
-                    className={cn(
-                      `h-10 w-10 rounded-full ${userAvatarBgClass} flex items-center justify-center ring-2 ring-white/20`
-                    )}
-                    style={{
-                      backgroundImage: 'url("https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face")',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
-                  >
-                    <span className={cn("text-sm font-medium text-white", !theme ? "text-gray-800" : "")}>
-                      A
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      `h-10 w-10 rounded-full ${userAvatarBgClass} flex items-center justify-center ring-2 ring-white/20`
-                    )}
-                    style={{
-                      backgroundImage: 'url("https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face")',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
-                  >
-                    <span className={cn("text-sm font-medium text-white", !theme ? "text-gray-800" : "")}>
-                      A
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <p className={cn("text-sm font-medium", textClass)}>
-                      Admin User
-                    </p>
-                    <p className={cn("text-xs", subTextClass)}>
-                      admin@ecommerce.com
-                    </p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className={cn("text-xs", subTextClass)}>Online</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         </div>
