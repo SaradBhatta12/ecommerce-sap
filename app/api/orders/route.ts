@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       shipping,
       discount,
       total,
+      addressDetails, // Add support for direct address details
     } = await request.json();
 
     if (!addressId || !paymentMethod || !items || items.length === 0) {
@@ -40,9 +41,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const address = user.addresses.id(addressId);
-    if (!address) {
-      return NextResponse.json({ error: "Address not found" }, { status: 404 });
+    // If addressDetails is provided, use it directly
+    // Otherwise, look up the address from the user's saved addresses
+    let address;
+    if (addressDetails) {
+      address = addressDetails;
+    } else {
+      address = user.addresses.id(addressId);
+      if (!address) {
+        return NextResponse.json({ error: "Address not found" }, { status: 404 });
+      }
     }
 
     // Validate stock availability before creating order

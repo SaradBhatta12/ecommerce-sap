@@ -29,7 +29,15 @@ export const getOrDerById = async (id: string) => {
   }
 };
 
-export const getAllOrders = async (page: number = 1, limit: number = 10) => {
+export const getAllOrders = async (
+  page: number = 1,
+  limit: number = 10,
+  status?: string,
+  payment?: string,
+  dateFrom?: string,
+  dateTo?: string,
+  searchQuery?: string,
+) => {
   try {
     const skip = (page - 1) * limit;
     const totalOrders = await Order.countDocuments();
@@ -49,7 +57,29 @@ export const getAllOrders = async (page: number = 1, limit: number = 10) => {
         status: 401,
       };
     }
+    let query: any = {};
+    if (status && status !== "all") {
+      query.status = status;
+    }
+    if (payment && payment !== "all") {
+      query.paymentStatus = payment;
+    }
+    if (dateFrom && dateTo) {
+      query.createdAt = {
+        $gte: new Date(dateFrom),
+        $lte: new Date(dateTo),
+      };
+    }
+    if (searchQuery) {
+      query.$or = [
+        { "user.name": { $regex: searchQuery, $options: "i" } },
+        { "user.email": { $regex: searchQuery, $options: "i" } },
+      ];
+    }
     const orders = await Order.aggregate([
+      {
+        $match: query,
+      },
       {
         $lookup: {
           from: "users",

@@ -54,6 +54,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+interface Filter{
+  status?: string;
+  payment?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 const getStatusColor = (status: string) => {
   switch (status) {
     case "delivered":
@@ -105,20 +112,26 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [search, setSearch] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  console.log(orders)
-  const [totalOrders, setTotalOrders] = useState<number>(0);
+      const [totalOrders, setTotalOrders] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [filters, setFilters] = useState<Filters>({
-    status: "",
-    payment: "",
+  const [filters, setFilters] = useState<Filter>({
+    status: "all",
+    payment: "all",
     dateFrom: "",
     dateTo: "",
   });
   const getAllOrdersAdmin = async () => {
     try {
       setLoading(true);
-      const response = await getAllOrders(currentPage, 20);
+      const response = await getAllOrders(
+        currentPage, 20,
+        filters.status,
+        filters.payment,
+        filters.dateFrom,
+        filters.dateTo,
+        searchQuery,
+      );
       if (response.succes) {
         const allCleanOrders = JSON.parse(response.orders as string);
         setTotalOrders(response.totalOrders as number);
@@ -136,7 +149,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     getAllOrdersAdmin();
-  }, [currentPage]);
+  }, [currentPage, filters, searchQuery]);
 
 
   const getPages = () => {
@@ -264,7 +277,7 @@ export default function OrdersPage() {
 
                     <div className="space-y-2">
                       <Label>Date Range</Label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-col justify-left">
                         <Input
                           type="date"
                           value={filters.dateFrom}

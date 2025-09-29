@@ -54,10 +54,7 @@ export default function CartPage() {
   const cartItems = useSelector(selectCartItems);
   const { formatPrice } = useCurrency();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
-  const [discount, setDiscount] = useState(0);
-  const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
-  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  // Discount functionality moved to checkout page
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -127,77 +124,12 @@ export default function CartPage() {
     );
   };
 
+  // Total is same as subtotal since discount functionality is moved to checkout
   const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
-    const validDiscount = typeof discount === 'number' && !isNaN(discount) ? Math.max(0, discount) : 0;
-    const result = subtotal - validDiscount;
-    return Math.round(result * 100) / 100; // Round to 2 decimal places
+    return calculateSubtotal();
   };
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
-
-    setIsApplyingCoupon(true);
-
-    try {
-      const response = await fetch('/api/discounts/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: couponCode,
-          cartTotal: calculateSubtotal(),
-          cartItems: cartItems.map(item => ({
-            productId: item.id,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.valid) {
-        const subtotal = calculateSubtotal();
-        let discountAmount = 0;
-
-        if (data.discount.type === 'percentage') {
-          discountAmount = (subtotal * data.discount.value) / 100;
-          if (data.discount.maxDiscount) {
-            discountAmount = Math.min(discountAmount, data.discount.maxDiscount);
-          }
-        } else {
-          discountAmount = data.discount.value;
-        }
-
-        // Check minimum purchase requirement
-        if (data.discount.minPurchase && subtotal < data.discount.minPurchase) {
-          toast.error(`This coupon requires a minimum purchase of ${formatPrice(data.discount.minPurchase)}`);
-          setIsApplyingCoupon(false);
-          return;
-        }
-
-        setDiscount(discountAmount);
-        setAppliedDiscount(data.discount);
-        toast.success(`You saved ${formatPrice(discountAmount)}!`);
-      } else {
-        toast.error(data.message || "The coupon code you entered is invalid or expired.")
-      }
-    } catch (error) {
-      console.error('Error applying coupon:', error);
-      toast.error("Failed to apply coupon. Please try again.")
-    } finally {
-      setIsApplyingCoupon(false);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setDiscount(0);
-    setAppliedDiscount(null);
-    setCouponCode("");
-    toast.success("The discount has been removed from your order.")
-  };
+  // Discount functionality moved to checkout page
 
   const getEstimatedDelivery = () => {
     const today = new Date();
@@ -462,53 +394,7 @@ export default function CartPage() {
                   <span>{formatPrice(calculateSubtotal())}</span>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Input
-                    placeholder="Coupon code"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    className="flex-grow"
-                  />
-                  <Button
-                    onClick={handleApplyCoupon}
-                    disabled={isApplyingCoupon || !couponCode.trim()}
-                    size="sm"
-                  >
-                    {isApplyingCoupon ? "Applying..." : "Apply"}
-                  </Button>
-                </div>
-
-                {discount > 0 && appliedDiscount && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-green-600">
-                      <span className="flex items-center">
-                        <Tag className="h-4 w-4 mr-1" />
-                        Discount ({appliedDiscount.code})
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span>- {formatPrice(discount)}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRemoveCoupon}
-                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {appliedDiscount.type === 'percentage'
-                        ? `${appliedDiscount.value}% off`
-                        : `Rs. ${appliedDiscount.value} off`}
-                      {appliedDiscount.usageLimit && (
-                        <span className="ml-2">
-                          ({appliedDiscount.usageCount}/{appliedDiscount.usageLimit} used)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+                {/* Discount functionality moved to checkout page */}
 
                 <div className="flex justify-between">
                   <span>Shipping</span>
