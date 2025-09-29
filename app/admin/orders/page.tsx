@@ -49,6 +49,10 @@ import Image from "next/image";
 import user from "@/models/user";
 import { Avatar } from "@/components/ui/avatar";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -97,121 +101,90 @@ const getPaymentStatusIcon = (status: string) => {
 
 export default function OrdersPage() {
   const { formatPrice } = useCurrency();
-  const [orders, setOrders] = useState([]);
-  console.log(orders);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [orders, setOrders] = useState<IOrder[]>([]);
+  const [search, setSearch] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  console.log(orders)
+  const [totalOrders, setTotalOrders] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [filters, setFilters] = useState<Filters>({
+    status: "",
+    payment: "",
+    dateFrom: "",
+    dateTo: "",
+  });
   const getAllOrdersAdmin = async () => {
     try {
-      const response = await getAllOrders();
+      setLoading(true);
+      const response = await getAllOrders(currentPage, 20);
       if (response.succes) {
         const allCleanOrders = JSON.parse(response.orders as string);
-        setOrders(allCleanOrders);
+        setTotalOrders(response.totalOrders as number);
+        setTotalPages(response.totalPages as number);
+        setOrders(allCleanOrders as IOrder[]);
       } else {
         toast.error(response.message);
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     getAllOrdersAdmin();
-  }, []);
+  }, [currentPage]);
+
+
+  const getPages = () => {
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      // show all if few pages
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1); // always show first
+
+      if (currentPage > 4) {
+        pages.push("ellipsis-left");
+      }
+
+      // show current page ±2
+      const start = Math.max(2, currentPage - 2);
+      const end = Math.min(totalPages - 1, currentPage + 2);
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      if (currentPage < totalPages - 3) {
+        pages.push("ellipsis-right");
+      }
+
+      pages.push(totalPages); // always show last
+    }
+
+    return pages;
+  };
   return (
     <div className="min-h-screen">
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div>
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">
               Orders Management
             </h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Track and manage all your customer orders in one place
-            </p>
+
           </div>
-          <ThemeToggle />
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                Total Orders
-              </CardTitle>
-              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                <Package className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold">1,234</div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-                <span className="text-green-500 font-medium">+12%</span>
-                <span className="ml-1 hidden sm:inline">from last month</span>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                Revenue
-              </CardTitle>
-              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 dark:text-green-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold">{formatPrice(45231)}</div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-                <span className="text-green-500 font-medium">+8%</span>
-                <span className="ml-1 hidden sm:inline">from last month</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                Pending
-              </CardTitle>
-              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
-                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600 dark:text-orange-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold">23</div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <TrendingUp className="h-3 w-3 mr-1 text-red-500 rotate-180" />
-                <span className="text-red-500 font-medium">-4%</span>
-                <span className="ml-1 hidden sm:inline">from yesterday</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                Delivery Rate
-              </CardTitle>
-              <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
-                <Truck className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600 dark:text-purple-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold">98.5%</div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-                <span className="text-green-500 font-medium">+2%</span>
-                <span className="ml-1 hidden sm:inline">from last month</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Orders Table */}
         <Card>
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -226,15 +199,108 @@ export default function OrdersPage() {
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <div className="relative flex-1 sm:flex-initial">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search orders..."
-                    className="pl-10 w-full sm:w-[280px]"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Search orders..."
+                      className="pl-10 w-full sm:w-[280px]"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <Button onKeyDown={(e) => e.key === "Enter" && setSearchQuery(search)} onClick={() => setSearchQuery(search)} size="sm">
+                      Search
+                    </Button>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filter
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="w-80 p-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={filters.status}
+                        onValueChange={(value) =>
+                          setFilters((prev) => ({ ...prev, status: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="processing">Processing</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Payment</Label>
+                      <Select
+                        value={filters.payment}
+                        onValueChange={(value) =>
+                          setFilters((prev) => ({ ...prev, payment: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All payments" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="unpaid">Unpaid</SelectItem>
+                          <SelectItem value="refunded">Refunded</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Date Range</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="date"
+                          value={filters.dateFrom}
+                          onChange={(e) =>
+                            setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
+                          }
+                        />
+                        <span className="text-muted-foreground">to</span>
+                        <Input
+                          type="date"
+                          value={filters.dateTo}
+                          onChange={(e) =>
+                            setFilters((prev) => ({ ...prev, dateTo: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between gap-2 pt-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setFilters({ status: "", payment: "", dateFrom: "", dateTo: "" });
+                        }}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        size="sm"
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
                   Export
@@ -243,28 +309,10 @@ export default function OrdersPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Tabs defaultValue="all" className="w-full">
-              <div className="px-6 pb-4">
-                <TabsList>
-                  <TabsTrigger value="all" className="text-sm">
-                    All Orders
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="text-sm">
-                    Pending
-                  </TabsTrigger>
-                  <TabsTrigger value="processing" className="text-sm">
-                    Processing
-                  </TabsTrigger>
-                  <TabsTrigger value="shipped" className="text-sm">
-                    Shipped
-                  </TabsTrigger>
-                  <TabsTrigger value="delivered" className="text-sm">
-                    Delivered
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+            <div className="w-full">
 
-              <TabsContent value="all" className="mt-0">
+
+              <div className="mt-0">
                 {/* Desktop Table */}
                 <div className="hidden lg:block">
                   <Table>
@@ -287,113 +335,129 @@ export default function OrdersPage() {
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
-                      {orders?.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center">
-                            No orders found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {orders?.map((order, index: number) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {index + 1}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 ">
-                              <div className="img">
-                                {(order.user as any).image ? (
-                                  <Image
-                                    src={
-                                      (order.user as any).image &&
-                                      (order.user as any).image
-                                    }
-                                    alt={(order.user as any).name}
-                                    width={40}
-                                    height={40}
-                                    className="rounded-full"
-                                  />
-                                ) : (
-                                  <Avatar className="h-8 w-8">
-                                    {(order.user as any).name?.[0]}
-                                  </Avatar>
-                                )}
-                              </div>
-                              <div>
-                                <div className="font-medium">
-                                  {(order.user as any).name}
+                    {
+                      loading && orders?.length === 0 ? (
+                        <TableBody>
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center">
+                              Loading...
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      ) : !loading && orders?.length === 0 ? (
+                        <TableBody>
+                          <TableRow className="ordernot-found">
+                            <TableCell colSpan={7} className="text-center">
+                              <span className="text-sm text-muted-foreground">
+                                No orders found
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      ) : (
+                        <TableBody >
+
+                          {orders?.map((order, index: number) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2 ">
+                                  <div className="img">
+                                    {(order.user as any).image ? (
+                                      <Image
+                                        src={
+                                          (order.user as any).image &&
+                                          (order.user as any).image
+                                        }
+                                        alt={(order.user as any).name}
+                                        width={40}
+                                        height={40}
+                                        className="rounded-full"
+                                      />
+                                    ) : (
+                                      <Avatar className="h-8 w-8">
+                                        {(order.user as any).name?.[0]}
+                                      </Avatar>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {(order.user as any).name}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {(order.user as any).email}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {(order.user as any).email}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div>
+                                    {new Date(order.createdAt).toLocaleDateString()}
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    {new Date(order.createdAt).toLocaleTimeString()}
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div>
-                                {new Date(order.createdAt).toLocaleDateString()}
-                              </div>
-                              <div className="text-muted-foreground">
-                                {new Date(order.createdAt).toLocaleTimeString()}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(order.status)}>
-                              {order.status.charAt(0).toUpperCase() +
-                                order.status.slice(1)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              {getPaymentStatusIcon(order.paymentStatus)}
-                              <Badge
-                                variant="outline"
-                                className={getPaymentStatusColor(
-                                  order.paymentStatus
-                                )}
-                              >
-                                {order.paymentStatus.charAt(0).toUpperCase() +
-                                  order.paymentStatus.slice(1)}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatPrice(order.total)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                  <Link
-                                    href={`/admin/orders/${order._id}`}
-                                    className="flex items-center"
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={getStatusColor(order.status)}>
+                                  {order.status.charAt(0).toUpperCase() +
+                                    order.status.slice(1)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5">
+                                  {getPaymentStatusIcon(order.paymentStatus)}
+                                  <Badge
+                                    variant="outline"
+                                    className={getPaymentStatusColor(
+                                      order.paymentStatus
+                                    )}
                                   >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Details
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>Edit Order</DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  Download Invoice
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
+                                    {order.paymentStatus.charAt(0).toUpperCase() +
+                                      order.paymentStatus.slice(1)}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatPrice(order.total)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                      <Link
+                                        href={`/admin/orders/${order._id}`}
+                                        className="flex items-center"
+                                      >
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        View Details
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>Edit Order</DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                      Download Invoice
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      )
+                    }
                   </Table>
                 </div>
 
@@ -464,34 +528,53 @@ export default function OrdersPage() {
                     </Card>
                   ))}
                 </div>
-              </TabsContent>
+              </div>
+              <div className="pagination p-4">
+                <Pagination>
+                  <PaginationContent>
+                    {/* Previous button */}
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
 
-              {/* Other tab contents */}
-              <TabsContent value="pending" className="mt-0">
-                <div className="p-8 text-center text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-4" />
-                  <p>Pending orders will appear here</p>
-                </div>
-              </TabsContent>
-              <TabsContent value="processing" className="mt-0">
-                <div className="p-8 text-center text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4" />
-                  <p>Processing orders will appear here</p>
-                </div>
-              </TabsContent>
-              <TabsContent value="shipped" className="mt-0">
-                <div className="p-8 text-center text-muted-foreground">
-                  <Truck className="h-12 w-12 mx-auto mb-4" />
-                  <p>Shipped orders will appear here</p>
-                </div>
-              </TabsContent>
-              <TabsContent value="delivered" className="mt-0">
-                <div className="p-8 text-center text-muted-foreground">
-                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4" />
-                  <p>Delivered orders will appear here</p>
-                </div>
-              </TabsContent>
-            </Tabs>
+                    {/* Page numbers */}
+                    {getPages().map((page, idx) => (
+                      <PaginationItem key={idx} >
+                        {typeof page === "number" ? (
+                          <PaginationLink
+                            className="rounded-full shadow-none"
+                            onClick={() => setCurrentPage(page)}
+                            isActive={page === currentPage}
+                          >
+                            {page}
+                          </PaginationLink>
+                        ) : (
+                          <PaginationEllipsis />
+                        )}
+                      </PaginationItem>
+                    ))}
+
+                    {/* Next button */}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          currentPage < totalPages && setCurrentPage(currentPage + 1)
+                        }
+                        className={
+                          currentPage === totalPages
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+
+            </div>
           </CardContent>
         </Card>
       </div>

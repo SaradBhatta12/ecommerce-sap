@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetWishlistQuery, useRemoveFromWishlistMutation } from "@/store/api/userApi";
+import { useGetWishlistQuery, useRemoveFromWishlistMutation, useClearWishlistMutation } from "@/store/api/userApi";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatPrice } from "@/lib/utils";
 import { useDispatch } from "react-redux";
@@ -24,14 +24,18 @@ interface WishlistItem {
   product: {
     _id: string;
     name: string;
-    price: number;
-    originalPrice?: number;
+    originalPrice: number;
+    discountPrice?: number;
     images: string[];
     category: string;
+    brand: string;
     inStock: boolean;
     rating?: number;
     reviewCount?: number;
     description?: string;
+    tags?: string[];
+    isOnSale?: boolean;
+    discount?: number;
   };
   addedAt: string;
 }
@@ -57,6 +61,7 @@ export default function WishlistPage() {
     refetchOnReconnect: true,
   });
   const [removeFromWishlistMutation, { isLoading: isRemoving }] = useRemoveFromWishlistMutation();
+  const [clearWishlistMutation, { isLoading: isClearing }] = useClearWishlistMutation();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -95,9 +100,9 @@ export default function WishlistPage() {
         case "oldest":
           return new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
         case "price-low":
-          return a.product.price - b.product.price;
+          return (a.product.discountPrice || a.product.originalPrice) - (b.product.discountPrice || b.product.originalPrice);
         case "price-high":
-          return b.product.price - a.product.price;
+          return (b.product.discountPrice || b.product.originalPrice) - (a.product.discountPrice || a.product.originalPrice);
         case "name":
           return a.product.name.localeCompare(b.product.name);
         default:
@@ -138,16 +143,13 @@ export default function WishlistPage() {
 
   const clearWishlist = useCallback(async () => {
     try {
-      // Remove all items one by one since we don't have a clear all endpoint
-      for (const item of wishlistItems) {
-        await removeFromWishlistMutation({ productId: item.product._id }).unwrap();
-      }
+      await clearWishlistMutation().unwrap();
       toast.success("Wishlist cleared successfully!");
     } catch (error) {
       console.error("Error clearing wishlist:", error);
       toast.error("Error clearing wishlist. Please try again.");
     }
-  }, [wishlistItems, removeFromWishlistMutation]);
+  }, [clearWishlistMutation]);
 
   const addToCart = useCallback(async (product: WishlistItem['product']) => {
     try {

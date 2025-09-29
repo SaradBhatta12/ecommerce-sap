@@ -29,8 +29,18 @@ export const getOrDerById = async (id: string) => {
   }
 };
 
-export const getAllOrders = async () => {
+export const getAllOrders = async (page: number = 1, limit: number = 10) => {
   try {
+    const skip = (page - 1) * limit;
+    const totalOrders = await Order.countDocuments();
+    const totalPages = Math.ceil(totalOrders / limit);
+    if (page > totalPages) {
+      return {
+        succes: false,
+        message: "Page not found",
+        status: 404,
+      };
+    }
     const isAuthenticated = await getServerSession(authOptions);
     if (!isAuthenticated) {
       return {
@@ -66,6 +76,17 @@ export const getAllOrders = async () => {
           "user.image": 1,
         },
       },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
     ]);
     if (!orders) {
       return {
@@ -78,6 +99,8 @@ export const getAllOrders = async () => {
     return {
       succes: true,
       orders: orderCleanFormat,
+      totalOrders,
+      totalPages,
       status: 200,
     };
   } catch (error) {

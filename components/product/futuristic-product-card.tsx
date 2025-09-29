@@ -7,7 +7,8 @@ import { motion } from "framer-motion"
 import { Heart, ShoppingCart, Eye, Check } from "lucide-react"
 import { HolographicCard } from "@/components/ui/holographic-card"
 import { Button } from "@/components/ui/button"
-import { addToWishlist, removeFromWishlist } from "@/lib/api-endpoints"
+import { useSession } from "next-auth/react"
+import { useCheckWishlistItemQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store/api/userApi"
 import { toast } from "sonner"
 import { useCurrency } from "@/contexts/CurrencyContext"
 import { formatPrice } from "@/lib/utils"
@@ -33,28 +34,44 @@ interface FuturisticProductCardProps {
 
 export function FuturisticProductCard({ product, inWishlist = false }: FuturisticProductCardProps) {
   const { formatPrice } = useCurrency()
-  const [isWishlisted, setIsWishlisted] = useState(inWishlist)
+  const { data: session } = useSession()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [showQuickView, setShowQuickView] = useState(false)
 
-  // Store functionality removed
+  // Check if product is in wishlist
+  const { data: wishlistCheck } = useCheckWishlistItemQuery(
+    { productId: product._id },
+    { skip: !session }
+  )
+  const isWishlisted = wishlistCheck?.isInWishlist || false
+
+  // Wishlist mutations
+  const [addToWishlistMutation, { isLoading: isAddingToWishlist }] = useAddToWishlistMutation()
+  const [removeFromWishlistMutation, { isLoading: isRemovingFromWishlist }] = useRemoveFromWishlistMutation()
+  const isTogglingWishlist = isAddingToWishlist || isRemovingFromWishlist
 
   const handleWishlistToggle = async () => {
+    if (!session) {
+      toast.warning("Authentication Required", {
+        description: "Please sign in to add items to your wishlist",
+      });
+      return;
+    }
+
     try {
       if (isWishlisted) {
-        await removeFromWishlist(product._id)
-        setIsWishlisted(false)
+        await removeFromWishlistMutation({ productId: product._id }).unwrap()
         toast.success("Removed from wishlist", {
           description: `${product.name} has been removed from your wishlist`,
         })
       } else {
-        await addToWishlist(product._id)
-        setIsWishlisted(true)
+        await addToWishlistMutation({ productId: product._id }).unwrap()
         toast.success("Added to wishlist", {
           description: `${product.name} has been added to your wishlist`,
         })
       }
     } catch (error) {
+      console.error("Error toggling wishlist:", error)
       toast.error("Error", {
         description: "Failed to update wishlist",
       })
@@ -153,7 +170,7 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
             )}
           </div>
 
-          <div className="mt-auto pt-3">
+          <div className="mt-auto pt-3 space-y-2">
             <Button
               onClick={handleAddToCart}
               className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
@@ -171,6 +188,17 @@ export function FuturisticProductCard({ product, inWishlist = false }: Futuristi
                   Add to Cart
                 </>
               )}
+            </Button>
+            
+            <Button
+              onClick={handleWishlistToggle}
+              variant="outline"
+              className="w-full border-white/20 text-white hover:bg-white/10"
+              disabled={isTogglingWishlist}
+              aria-label={isWishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+            >
+              <Heart className={`mr-2 h-4 w-4 ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
+              {isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
             </Button>
           </div>
         </div>

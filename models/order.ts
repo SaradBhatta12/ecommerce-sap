@@ -10,6 +10,7 @@ export interface IOrderItem {
 
 export interface IOrder extends Document {
   user: mongoose.Types.ObjectId;
+  orderNumber: string;
   items: IOrderItem[];
   address: {
     fullName: string;
@@ -30,7 +31,7 @@ export interface IOrder extends Document {
     referenceId?: string;
     metadata?: any;
   };
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "handover_to_courier";
   subtotal: number;
   shipping: number;
   discount?: {
@@ -51,6 +52,13 @@ const orderSchema = new Schema<IOrder>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    orderNumber: {
+      type: String,
+      unique: true,
+      default: function() {
+        return `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      }
     },
     items: [
       {
@@ -121,7 +129,7 @@ const orderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "processing", "shipped", "handover_to_courier", "delivered", "cancelled"],
       default: "pending",
     },
     subtotal: {

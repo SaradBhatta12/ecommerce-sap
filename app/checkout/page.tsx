@@ -141,11 +141,21 @@ export default function CheckoutPage() {
   // Auto-select default address
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
+      // First try to restore from localStorage
+      const storedAddress = localStorage.getItem('selectedAddress');
+      if (storedAddress && addresses.find((addr: Address) => addr._id === storedAddress)) {
+        setSelectedAddress(storedAddress);
+        return;
+      }
+      
+      // Otherwise, select default or first address
       const defaultAddress = addresses.find((addr: Address) => addr.isDefault);
       if (defaultAddress) {
         setSelectedAddress(defaultAddress._id);
+        localStorage.setItem('selectedAddress', defaultAddress._id);
       } else {
         setSelectedAddress(addresses[0]._id);
+        localStorage.setItem('selectedAddress', addresses[0]._id);
       }
     }
   }, [addresses, selectedAddress]);
@@ -161,6 +171,8 @@ export default function CheckoutPage() {
       const refId = searchParams.get('refId');
       const amt = searchParams.get('amt');
       const error = searchParams.get('error');
+      
+     
       
       // Check if there are payment-related parameters
       const hasPaymentDetails = esewaData || transactionUuid || oid || pidx || refId || amt || error;
@@ -185,15 +197,17 @@ export default function CheckoutPage() {
         }
         
         setPaymentError(errorMessage);
-        // Clear URL parameters
+        // Clear URL parameters without redirecting
         window.history.replaceState({}, document.title, window.location.pathname);
         return;
       }
       
       // If no payment details, don't process
       if (!hasPaymentDetails) {
+        console.log('No payment details found, skipping processing');
         return;
       }
+      
       
       // Set processing state
       setIsProcessingPayment(true);
@@ -201,11 +215,55 @@ export default function CheckoutPage() {
       try {
         // Get order data from session storage
         const orderDataStr = sessionStorage.getItem('orderData');
-        if (!orderDataStr) {
-          throw new Error('Order data not found. Please try placing the order again.');
-        }
+        console.log('Order data from session storage:', orderDataStr);
         
-        const orderData = JSON.parse(orderDataStr);
+        let orderData;
+        
+        if (!orderDataStr) {
+          // Try to reconstruct order data from cart if available
+          const cartDataStr = localStorage.getItem('cart');
+          if (cartDataStr) {
+            try {
+              const cartItems = JSON.parse(cartDataStr);
+              if (cartItems && cartItems.length > 0) {
+                // Calculate total from cart items
+                const cartTotal = cartItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+                
+                // Create minimal order data from cart
+                orderData = {
+                  items: cartItems.map((item) => ({
+                    productId: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    image: item.image || ''
+                  })),
+                  total: cartTotal,
+                  subtotal: cartTotal,
+                  shipping: 0,
+                  tax: 0,
+                  discount: 0,
+                  paymentMethod: 'esewa', // Default to esewa since we're processing payment
+                  addressId: localStorage.getItem('selectedAddress') || '', // Retrieve stored address
+                  timestamp: new Date().toISOString()
+                };
+                
+                // Store the reconstructed data for future use
+                sessionStorage.setItem('orderData', JSON.stringify(orderData));
+              } else {
+                throw new Error('Order data not found. Please try placing the order again.');
+              }
+            } catch (cartError) {
+              console.error('Failed to reconstruct order from cart:', cartError);
+              throw new Error('Order data not found. Please try placing the order again.');
+            }
+          } else {
+            throw new Error('Order data not found. Please try placing the order again.');
+          }
+        } else {
+          orderData = JSON.parse(orderDataStr);
+        }
+        console.log('Parsed order data:', orderData.items);
         
         // Validate order data
         if (!orderData.items || orderData.items.length === 0) {
@@ -227,7 +285,8 @@ export default function CheckoutPage() {
               transactionId: decodedData.transaction_uuid || transactionUuid,
               provider: 'esewa',
               amount: parseFloat(decodedData.total_amount || amt || '0'),
-              refId: decodedData.transaction_code || decodedData.transaction_uuid
+              refId: decodedData.transaction_code || decodedData.transaction_uuid,
+              status: 'completed'
             };
           } catch (decodeError) {
             console.error('Failed to decode eSewa data:', decodeError);
@@ -239,7 +298,8 @@ export default function CheckoutPage() {
             transactionId: oid,
             provider: 'esewa',
             amount: parseFloat(amt || '0'),
-            refId: refId
+            refId: refId,
+            status: 'completed'
           };
         } else if (pidx) {
           // Khalti payment
@@ -247,7 +307,8 @@ export default function CheckoutPage() {
             transactionId: pidx,
             provider: 'khalti',
             amount: parseFloat(amt || '0'),
-            refId: refId
+            refId: refId,
+            status: 'completed'
           };
         } else {
           // Fallback
@@ -255,9 +316,11 @@ export default function CheckoutPage() {
             transactionId: transactionUuid || refId || 'unknown',
             provider: 'unknown',
             amount: parseFloat(amt || '0'),
-            refId: refId || transactionUuid
+            refId: refId || transactionUuid,
+            status: 'completed'
           };
         }
+        
         
         // Validate payment details
         if (!paymentDetails.transactionId) {
@@ -267,6 +330,7 @@ export default function CheckoutPage() {
         if (!paymentDetails.provider || paymentDetails.provider === 'unknown') {
           throw new Error('Unknown payment provider. Payment verification failed.');
         }
+        
         
         // Complete the order
         const response = await fetch('/api/payment/complete', {
@@ -280,15 +344,18 @@ export default function CheckoutPage() {
           }),
         });
 
+       
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Server error' }));
+          console.error('API error response:', errorData);
           throw new Error(errorData.message || `Server error: ${response.status}`);
         }
 
         const result = await response.json();
 
         if (result.success) {
-          // Set order details for success modal
+          // Set order details for success modal - don't redirect, show modal
           setOrderDetails({
             id: result.orderId || result.order?.id,
             orderNumber: result.orderNumber || result.order?.orderNumber,
@@ -300,8 +367,10 @@ export default function CheckoutPage() {
           setShowSuccessModal(true);
           dispatch(clearCart());
           sessionStorage.removeItem('orderData');
-          // Clear URL parameters
+          // Clear URL parameters without redirecting
           window.history.replaceState({}, document.title, window.location.pathname);
+          toast.success("Order created successfully!");
+         
         } else {
           throw new Error(result.message || 'Order creation failed');
         }
@@ -328,6 +397,7 @@ export default function CheckoutPage() {
         }
         
         setPaymentError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setIsProcessingPayment(false);
       }
@@ -409,14 +479,16 @@ export default function CheckoutPage() {
     }
 
     try {
-      // Prepare order data
+      // Prepare order data with better validation
       const orderData = {
         addressId: selectedAddress,
         paymentMethod,
         items: cartItems.map((item) => ({
           productId: item.id,
+          name: item.name,
+          price: item.price,
           quantity: item.quantity,
-          price: item.price
+          image: item.image || ''
         })),
         subtotal,
         shipping,
@@ -430,7 +502,12 @@ export default function CheckoutPage() {
           : undefined
       };
 
-      // For COD orders, create order immediately
+      // Validate order data before proceeding
+      if (!orderData.addressId || !orderData.paymentMethod || !orderData.items || orderData.items.length === 0) {
+        throw new Error("Invalid order data. Please refresh and try again.");
+      }
+
+      // For COD orders, create order immediately without redirecting
       if (paymentMethod === "cod") {
         const orderResult = await createOrder(orderData).unwrap();
         
@@ -445,7 +522,7 @@ export default function CheckoutPage() {
           }
         }
         
-        // Show success modal
+        // Show success modal instead of redirecting
         setOrderDetails({
           id: orderResult.orderId,
           orderNumber: orderResult.orderNumber || `ORD-${orderResult.orderId}`,
@@ -455,26 +532,49 @@ export default function CheckoutPage() {
         });
         setShowSuccessModal(true);
         dispatch(clearCart());
+        toast.success("Order placed successfully!");
         return;
       }
 
       // For online payments, store order data and initiate payment
       sessionStorage.setItem('orderData', JSON.stringify(orderData));
       
-      // Initiate payment
+      // Initiate payment with better error handling
       try {
         toast.success("Redirecting to payment gateway...");
+        
+        // Check if payment functions are available
         if (typeof (window as any).initiatePayment === 'function') {
           (window as any).initiatePayment(paymentMethod, total, orderData);
-          toast.success("Redirecting to payment gateway...");
         } else {
-          throw new Error("Payment system not ready");
+          // Fallback to direct payment initiation
+          if (paymentMethod === "esewa") {
+            const { initiateEsewaPayment } = await import('@/lib/payment/esewa');
+            initiateEsewaPayment({
+              amount: total,
+              orderData
+            });
+          } else if (paymentMethod === "khalti") {
+            const { initiateKhaltiPayment } = await import('@/lib/payment/khalti');
+            const orderId = `ORDER_${Date.now()}`;
+            
+            initiateKhaltiPayment({
+              amount: total,
+              productId: orderId,
+              productName: `Order Payment`,
+              successUrl: `${window.location.origin}/checkout?payment_success=true`,
+              failureUrl: `${window.location.origin}/checkout?payment_failed=true`,
+            });
+          } else {
+            throw new Error("Unsupported payment method");
+          }
         }
-      } catch (error) {
-        console.error("Payment initiation error:", error);
+      } catch (paymentError) {
+        console.error("Payment initiation error:", paymentError);
         toast.error("Payment system not ready. Please try again.");
         // Remove order data if payment initiation fails
         sessionStorage.removeItem('orderData');
+        throw paymentError;
       }
       
     } catch (error: any) {
@@ -632,7 +732,11 @@ export default function CheckoutPage() {
                           ? "border-primary bg-primary/5"
                           : "border-border"
                         }`}
-                      onClick={() => setSelectedAddress(address._id)}
+                      onClick={() => {
+                        setSelectedAddress(address._id);
+                        // Store selected address in localStorage for payment redirect recovery
+                        localStorage.setItem('selectedAddress', address._id);
+                      }}
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -676,7 +780,7 @@ export default function CheckoutPage() {
                 selectedMethod={paymentMethod}
                 onPaymentMethodChange={(method) => setPaymentMethod(method)}
                 onPaymentComplete={(transactionId) => {
-                  console.log("Payment completed:", transactionId);
+           
                 }}
                 amount={total}
                 onPaymentInitiation={handlePaymentInitiation}

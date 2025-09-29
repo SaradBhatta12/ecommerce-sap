@@ -51,8 +51,8 @@ export function initiateEsewaPayment({
 
   // Create proper success and failure URLs with http/https protocol as required by eSewa
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-  const successUrl = `${baseUrl}/checkout/success?transaction_uuid=${transactionUuid}&payment_method=esewa`;
-  const failureUrl = `${baseUrl}/checkout?error=payment_failed&payment_method=esewa`;
+  const successUrl = `${baseUrl}/api/payment/esewa/success`;
+  const failureUrl = `${baseUrl}/api/payment/esewa/failure`;
 
   // Prepare payment data according to eSewa documentation
   const paymentData = {

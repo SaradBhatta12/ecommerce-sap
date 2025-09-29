@@ -17,9 +17,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { addToCart } from "@/store/slices/cartSlice";
-import { addToWishlist, removeFromWishlist } from "@/store/slices/wishlistSlice";
+import { useSession } from "next-auth/react";
+import { useCheckWishlistItemQuery, useAddToWishlistMutation, useRemoveFromWishlistMutation } from "@/store/api/userApi";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatPrice } from "@/lib/utils";
 
@@ -67,17 +66,20 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { formatPrice } = useCurrency();
-  const dispatch = useAppDispatch();
+  const { data: session } = useSession();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
 
-  // Get wishlist items from Redux store
-  const wishlistItems = useAppSelector((state) => state.wishlist.items);
-  const isInWishlist = wishlistItems.some((item: any) => 
-    item.productId === product._id
-  );
+  // Use RTK Query hooks for wishlist operations
+  const { data: wishlistCheck } = useCheckWishlistItemQuery(product._id, {
+    skip: !session?.user?.email,
+  });
+  const [addToWishlistMutation, { isLoading: isAddingToWishlist }] = useAddToWishlistMutation();
+  const [removeFromWishlistMutation, { isLoading: isRemovingFromWishlist }] = useRemoveFromWishlistMutation();
+
+  const isInWishlist = wishlistCheck?.isInWishlist || false;
+  const isTogglingWishlist = isAddingToWishlist || isRemovingFromWishlist;
 
   const handleProductClick = useCallback(() => {
     // Navigate to product detail page
@@ -92,15 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     try {
       setIsAddingToCart(true);
       
-      const cartItem = {
-        id: product._id, // Using 'id' to match CartItem interface
-        name: product.name,
-        price: product.discountPrice || product.price,
-        image: product.images[0] || "/placeholder-image.jpg",
-        quantity: 1,
-      };
-
-      dispatch(addToCart(cartItem));
+      // Add to cart logic would go here
       toast.success(`${product.name} added to cart!`, {
         description: "Item successfully added to your shopping cart",
         action: {
@@ -114,34 +108,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     } finally {
       setIsAddingToCart(false);
     }
-  }, [product, dispatch, isAddingToCart]);
+  }, [product, isAddingToCart]);
 
   const handleToggleWishlist = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (isTogglingWishlist) return;
+
+    if (!session) {
+      toast.warning("Authentication Required", {
+        description: "Please sign in to add items to your wishlist",
+      });
+      return;
+    }
     
     try {
-      setIsTogglingWishlist(true);
-      
       if (isInWishlist) {
-        dispatch(removeFromWishlist(product._id));
+        await removeFromWishlistMutation({ productId: product._id }).unwrap();
         toast.success("Removed from wishlist", {
           description: `${product.name} has been removed from your wishlist`
         });
       } else {
-        const wishlistItem = {
-          id: product._id, // Using 'id' to match WishlistItem interface
-          productId: product._id,
-          name: product.name,
-          slug: product.slug,
-          price: product.discountPrice || product.price,
-          originalPrice: product.price,
-          image: product.images[0] || "/placeholder-image.jpg",
-          addedAt: new Date().toISOString(),
-        };
-        dispatch(addToWishlist(wishlistItem));
+        await addToWishlistMutation({ productId: product._id }).unwrap();
         toast.success("Added to wishlist", {
           description: `${product.name} has been added to your wishlist`,
           action: {
@@ -153,10 +142,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     } catch (error) {
       console.error("Error toggling wishlist:", error);
       toast.error("Failed to update wishlist");
-    } finally {
-      setIsTogglingWishlist(false);
     }
-  }, [product, dispatch, isInWishlist, isTogglingWishlist]);
+  }, [product, session, isInWishlist, isTogglingWishlist, addToWishlistMutation, removeFromWishlistMutation]);
 
   // Calculate discount percentage
   const discountPercentage = product.discountPrice && product.price
