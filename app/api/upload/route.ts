@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { writeFile } from "fs/promises";
-import { join } from "path";
+import { UploadImage } from "@/_actions/_upload";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: Request) {
@@ -29,27 +28,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Create unique filename
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
-    const publicDir = join(process.cwd(), "public");
-    const uploadsDir = join(publicDir, "uploads");
-
-    // Ensure uploads directory exists
-    try {
-      await writeFile(join(uploadsDir, fileName), buffer);
-    } catch (error) {
-      console.error("Error writing file:", error);
+    const uploadedImage = await UploadImage(file);
+    if (!uploadedImage) {
       return NextResponse.json(
-        { error: "Failed to save file" },
+        { error: "Failed to upload image" },
         { status: 500 }
       );
     }
 
-    const url = `/uploads/${fileName}`;
+    const url = uploadedImage.filePath;
+    if (!url) {
+      return NextResponse.json(
+        { error: "Failed to upload image" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ url });
   } catch (error) {
