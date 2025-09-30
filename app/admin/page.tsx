@@ -33,7 +33,7 @@ import AdminStats from "@/components/admin/admin-stats";
 
 export default function AdminDashboardPage() {
   const { formatPrice } = useCurrency();
-  
+
   // RTK Query hooks for data fetching
   const {
     data: stats,
@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
     error: recentSalesError,
     refetch: refetchRecentSales,
   } = useGetRecentSalesQuery();
-  
+
   // Handle refresh all data
   const handleRefresh = () => {
     refetchStats();
@@ -73,14 +73,14 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="h-9"
             onClick={handleRefresh}
             disabled={statsLoading || analyticsLoading || recentSalesLoading}
           >
-            {(statsLoading || analyticsLoading || recentSalesLoading) ? (
+            {statsLoading || analyticsLoading || recentSalesLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -128,19 +128,25 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-center h-[300px]">
                   <div className="flex items-center space-x-2">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-muted-foreground">Loading analytics...</span>
+                    <span className="text-muted-foreground">
+                      Loading analytics...
+                    </span>
                   </div>
                 </div>
               ) : analytics?.revenue?.length > 0 ? (
                 <div className="space-y-4">
                   <div className="h-[300px] flex items-center justify-center">
                     <div className="text-center">
-                      <h3 className="text-lg font-semibold mb-2">Revenue Trend</h3>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Revenue Trend
+                      </h3>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         {analytics.revenue.slice(-3).map((item, index) => (
                           <div key={index} className="text-center">
                             <div className="font-medium">{item.month}</div>
-                            <div className="text-muted-foreground">{formatPrice(item.amount)}</div>
+                            <div className="text-muted-foreground">
+                              {formatPrice(item.amount)}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -154,7 +160,7 @@ export default function AdminDashboardPage() {
               )}
             </CardContent>
           </Card>
-          
+
           <Card className="col-span-3 hover-card-effect">
             <CardHeader>
               <CardTitle>Recent Sales</CardTitle>
@@ -235,8 +241,8 @@ export default function AdminDashboardPage() {
                       Increase inventory for trending products
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Smart watches and wireless earbuds are trending.
-                      Consider increasing stock by 15%.
+                      Smart watches and wireless earbuds are trending. Consider
+                      increasing stock by 15%.
                     </p>
                   </div>
                 </li>
@@ -263,8 +269,8 @@ export default function AdminDashboardPage() {
                       Cart abandonment alert
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Cart abandonment rate increased by 5%. Consider
-                      optimizing checkout process.
+                      Cart abandonment rate increased by 5%. Consider optimizing
+                      checkout process.
                     </p>
                   </div>
                 </li>
@@ -352,10 +358,7 @@ export default function AdminDashboardPage() {
                   <DollarSign className="mr-2 h-4 w-4" />
                   Create Discount
                 </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start col-span-2"
-                >
+                <Button variant="outline" className="justify-start col-span-2">
                   <Brain className="mr-2 h-4 w-4" />
                   Generate AI Report
                 </Button>
