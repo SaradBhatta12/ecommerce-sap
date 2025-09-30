@@ -509,7 +509,28 @@ export default function CheckoutPage() {
 
       // For COD orders, create order immediately without redirecting
       if (paymentMethod === "cod") {
-        const orderResult = await createOrder(orderData).unwrap();
+        // Get the selected address details
+        const selectedAddressDetails = addresses.find((addr: Address) => addr._id === selectedAddress);
+        if (!selectedAddressDetails) {
+          toast.error("Selected address not found. Please select a valid address.");
+          return;
+        }
+        
+        // Ensure address has city field (required by the order model)
+        const enhancedOrderData = {
+          ...orderData,
+          // Include the full address details to ensure city is present
+          addressDetails: {
+            fullName: selectedAddressDetails.fullName,
+            address: selectedAddressDetails.address,
+            city: selectedAddressDetails.city || selectedAddressDetails.district || "Unknown", // Fallback to district or default value
+            province: selectedAddressDetails.province,
+            postalCode: selectedAddressDetails.postalCode,
+            phone: selectedAddressDetails.phone
+          }
+        };
+        
+        const orderResult = await createOrder(enhancedOrderData).unwrap();
         
         // Apply discount if present
         if (discount) {

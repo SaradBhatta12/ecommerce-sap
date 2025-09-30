@@ -100,6 +100,7 @@
     "react-quill": "^2.0.0",
     "react-redux": "^9.2.0",
     "react-resizable-panels": "^2.1.7",
+    "react-to-print": "^3.1.1",
     "recharts": "latest",
     "slugify": "latest",
     "snappy": "latest",

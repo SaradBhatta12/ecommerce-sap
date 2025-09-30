@@ -7,6 +7,7 @@ import { paymentApi } from './api/paymentApi'
 import { utilityApi } from './api/utilityApi'
 import { adminApi } from './api/adminApi'
 import { locationApi } from './api/locationApi'
+import { orderApi } from './api/orderApi'
 import cartReducer from './slices/cartSlice'
 import wishlistReducer from './slices/wishlistSlice'
 
@@ -20,6 +21,7 @@ export const store = configureStore({
     [utilityApi.reducerPath]: utilityApi.reducer,
     [adminApi.reducerPath]: adminApi.reducer,
     [locationApi.reducerPath]: locationApi.reducer,
+    [orderApi.reducerPath]: orderApi.reducer,
     cart: cartReducer,
     wishlist: wishlistReducer,
   },
@@ -34,6 +36,7 @@ export const store = configureStore({
       .concat(utilityApi.middleware)
       .concat(adminApi.middleware)
       .concat(locationApi.middleware)
+      .concat(orderApi.middleware)
 })
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors
@@ -47,6 +50,13 @@ export type AppDispatch = typeof store.dispatch
 
 
 
+
+export {
+  // Order API hooks
+  useGetOrdersQuery,
+  useGetOrderByIdQuery,
+  useUpdateOrderStatusMutation,
+} from './api/orderApi'
 
 export {
   // Products API hooks
