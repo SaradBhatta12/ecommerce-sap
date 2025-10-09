@@ -50,14 +50,14 @@ export default function CollectionsSection({ categories = [], featuredProducts =
     .slice(0, 6);
   
   return (
-    <section className="relative py-16 lg:py-24 bg-gray-50 overflow-hidden">
+    <section className="relative py-16 lg:py-24 bg-gray-50 dark:bg-gray-900 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Content */}
         <div className="text-center mb-12 lg:mb-16">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-black leading-tight mb-6 lg:mb-8">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-black dark:text-white leading-tight mb-6 lg:mb-8">
             FEATURED COLLECTIONS
           </h2>
-          <p className="text-base lg:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed px-4">
+          <p className="text-base lg:text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed px-4">
             Discover our curated collections featuring the latest trends and timeless classics. 
             Each piece is carefully selected to bring you the best in contemporary fashion.
           </p>

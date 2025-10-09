@@ -9,6 +9,7 @@ import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import { StoreProvider } from "@/store/provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -29,25 +30,27 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <StoreProvider>
-        <SessionProvider>
-          <CurrencyProvider>
-            {/* Header */}
-            {shouldShowHeaderFooter && <Header />}
+      <CustomThemeProvider>
+        <StoreProvider>
+          <SessionProvider>
+            <CurrencyProvider>
+              {/* Header */}
+              {shouldShowHeaderFooter && <Header />}
 
-            {/* Main Content */}
-            <main className="flex-1">
-              {children}
-            </main>
+              {/* Main Content */}
+              <main className="flex-1 dark:bg-gray-900 dark:text-white transition-colors duration-300">
+                {children}
+              </main>
 
-            {/* Footer */}
-            {shouldShowHeaderFooter && <Footer />}
+              {/* Footer */}
+              {shouldShowHeaderFooter && <Footer />}
 
-            {/* Toast Notifications */}
-            <Toaster richColors closeButton position="top-right" />
-          </CurrencyProvider>
-        </SessionProvider>
-      </StoreProvider>
+              {/* Toast Notifications */}
+              <Toaster richColors closeButton position="top-right" />
+            </CurrencyProvider>
+          </SessionProvider>
+        </StoreProvider>
+      </CustomThemeProvider>
     </ThemeProvider>
   );
 }

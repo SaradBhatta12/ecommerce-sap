@@ -143,19 +143,19 @@ export default function ShopPage() {
   ].filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       {/* Enhanced Header Section */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
         <div className="container mx-auto px-4 py-6">
           {/* Breadcrumb */}
-          <div className="text-sm text-gray-500 mb-4 flex items-center">
-            <span className="hover:text-gray-700 cursor-pointer">Home</span>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-center">
+            <span className="hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer transition-colors">Home</span>
             <span className="mx-2">/</span>
-            <span className="text-gray-900 font-medium">Shop</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Shop</span>
             {currentCategory && (
               <>
                 <span className="mx-2">/</span>
-                <span className="text-gray-900 font-medium capitalize">
+                <span className="text-gray-900 dark:text-gray-100 font-medium capitalize">
                   {categories.find(cat => cat.slug === currentCategory)?.name || currentCategory}
                 </span>
               </>
@@ -165,13 +165,13 @@ export default function ShopPage() {
           {/* Page Title and Results Count */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 {currentCategory 
                   ? categories.find(cat => cat.slug === currentCategory)?.name || 'Products'
                   : 'All Products'
                 }
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Discover our curated collection of premium products
               </p>
             </div>
@@ -179,10 +179,10 @@ export default function ShopPage() {
             {/* Sort Dropdown */}
             <div className="mt-4 sm:mt-0">
               <Select value={selectedSort} onValueChange={handleSortChange}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                   <SelectItem value="featured">Featured</SelectItem>
                   <SelectItem value="newest">Newest</SelectItem>
                   <SelectItem value="price-asc">Price: Low to High</SelectItem>
@@ -197,18 +197,18 @@ export default function ShopPage() {
           <div className="mb-6">
             <form onSubmit={handleSearch} className="relative max-w-2xl">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5" />
                 <Input
                   type="text"
                   placeholder="Search for products, brands, categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-3 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
+                  className="pl-10 pr-4 py-3 text-base border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
                 />
                 <Button
                   type="submit"
                   size="sm"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 dark:text-gray-200"
                 >
                   Search
                 </Button>

@@ -119,9 +119,9 @@ export default function ImprovedAddressPicker({
 
   // Use deduplicated data
   const deduplicatedLocationTree = deduplicateLocations(locationTree as LocationData[]);
-  const deduplicatedProvinces = deduplicateLocations(provinces);
-  const deduplicatedCities = deduplicateLocations(cities);
-  const deduplicatedLandmarks = deduplicateLocations(landmarks);
+  const deduplicatedProvinces = deduplicateLocations(provinces as LocationData[]);
+  const deduplicatedCities = deduplicateLocations(cities as LocationData[]);
+  const deduplicatedLandmarks = deduplicateLocations(landmarks as LocationData[]);
 
   // Search functionality
   const [searchResults, setSearchResults] = useState<LocationData[]>([]);
@@ -212,7 +212,7 @@ export default function ImprovedAddressPicker({
     return parts.join(', ');
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (isConfirming) return; // Prevent multiple clicks
     
     if (!selectedLocation.country) {
@@ -223,14 +223,16 @@ export default function ImprovedAddressPicker({
     try {
       setIsConfirming(true);
       
+      const fullAddress = buildFullAddress();
       onSelect({
         ...selectedLocation,
         coordinates,
-        fullAddress: buildFullAddress()
+        fullAddress
       });
       
       onClose();
     } catch (error) {
+      console.error('Error confirming location:', error);
       toast.error('Failed to confirm selection');
     } finally {
       setIsConfirming(false);

@@ -38,7 +38,7 @@ export default function HeroBanner({ product, stats }: HeroBannerProps) {
   const { formatPrice } = useCurrency();
   
   return (
-    <section className="bg-gray-50 min-h-screen flex items-center">
+    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center transition-colors duration-300">
       <div className="w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-20">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 xl:gap-20 items-center py-12 lg:py-20">
@@ -49,33 +49,33 @@ export default function HeroBanner({ product, stats }: HeroBannerProps) {
                   <>
                     <div className="flex items-center gap-2 mb-4">
                       {product.isNew && (
-                        <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                        <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1">
                           <TrendingUp className="h-3 w-3" />
                           New Arrival
                         </span>
                       )}
                       {product.isFeatured && (
-                        <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                        <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-1">
                           <Star className="h-3 w-3" />
                           Featured
                         </span>
                       )}
                     </div>
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold text-black leading-[0.9] tracking-tight">
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold text-black dark:text-white leading-[0.9] tracking-tight transition-colors">
                       {product.name.split(' ').slice(0, 2).join(' ')}
                       <br />
-                      <span className="text-gray-600">{product.name.split(' ').slice(2).join(' ') || 'COLLECTION'}</span>
+                      <span className="text-gray-600 dark:text-gray-400">{product.name.split(' ').slice(2).join(' ') || 'COLLECTION'}</span>
                     </h1>
                     <div className="space-y-2">
-                      <p className="text-xl lg:text-2xl xl:text-3xl font-light text-gray-700 tracking-wide">
+                      <p className="text-xl lg:text-2xl xl:text-3xl font-light text-gray-700 dark:text-gray-300 tracking-wide">
                         {product.category.name}
                       </p>
                       <div className="flex items-center gap-4">
-                        <span className="text-2xl lg:text-3xl font-bold text-black">
+                        <span className="text-2xl lg:text-3xl font-bold text-black dark:text-white transition-colors">
                           {formatPrice(product.discountPrice || product.price)}
                         </span>
                         {product.discountPrice && (
-                          <span className="text-lg lg:text-xl text-gray-500 line-through">
+                          <span className="text-lg lg:text-xl text-gray-500 dark:text-gray-400 line-through">
                             {formatPrice(product.price)}
                           </span>
                         )}
@@ -88,25 +88,25 @@ export default function HeroBanner({ product, stats }: HeroBannerProps) {
                               className={`h-4 w-4 ${
                                 i < Math.floor(product.rating!)
                                   ? 'text-yellow-400 fill-current'
-                                  : 'text-gray-300'
+                                  : 'text-gray-300 dark:text-gray-600'
                               }`}
                             />
                           ))}
-                          <span className="text-sm text-gray-600 ml-1">({product.rating})</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">({product.rating})</span>
                         </div>
                       )}
                     </div>
                   </>
                 ) : (
                   <>
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold text-black leading-[0.9] tracking-tight">
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold text-black dark:text-white leading-[0.9] tracking-tight">
                       NEW
                       <br />
-                      <span className="text-gray-600">COLLECTION</span>
+                      <span className="text-gray-600 dark:text-gray-400">COLLECTION</span>
                     </h1>
                     <div className="space-y-1">
-                      <p className="text-xl lg:text-2xl xl:text-3xl font-light text-gray-700 tracking-wide">Summer</p>
-                      <p className="text-xl lg:text-2xl xl:text-3xl font-light text-gray-700 tracking-wide">2024</p>
+                      <p className="text-xl lg:text-2xl xl:text-3xl font-light text-gray-700 dark:text-gray-300 tracking-wide">Summer</p>
+                      <p className="text-xl lg:text-2xl xl:text-3xl font-light text-gray-700 dark:text-gray-300 tracking-wide">2024</p>
                     </div>
                   </>
                 )}
@@ -114,18 +114,18 @@ export default function HeroBanner({ product, stats }: HeroBannerProps) {
               
               {/* Stats Section */}
               {stats && (
-                <div className="grid grid-cols-3 gap-4 py-6 border-t border-gray-200">
+                <div className="grid grid-cols-3 gap-4 py-6 border-t border-gray-200 dark:border-gray-700">
                   <div className="text-center">
-                    <div className="text-2xl lg:text-3xl font-bold text-black">{stats.totalProducts}</div>
-                    <div className="text-sm text-gray-600">Products</div>
+                    <div className="text-2xl lg:text-3xl font-bold text-black dark:text-white">{stats.totalProducts}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Products</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl lg:text-3xl font-bold text-black">{stats.totalCategories}</div>
-                    <div className="text-sm text-gray-600">Categories</div>
+                    <div className="text-2xl lg:text-3xl font-bold text-black dark:text-white">{stats.totalCategories}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Categories</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl lg:text-3xl font-bold text-black">{stats.totalBrands}</div>
-                    <div className="text-sm text-gray-600">Brands</div>
+                    <div className="text-2xl lg:text-3xl font-bold text-black dark:text-white">{stats.totalBrands}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Brands</div>
                   </div>
                 </div>
               )}
@@ -135,7 +135,7 @@ export default function HeroBanner({ product, stats }: HeroBannerProps) {
                   asChild 
                   variant="outline" 
                   size="lg"
-                  className="group border-2 border-black text-black hover:bg-black hover:text-white transition-all duration-300 px-8 py-4 text-base font-medium uppercase tracking-wider"
+                  className="group border-2 border-black dark:border-white text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all duration-300 px-8 py-4 text-base font-medium uppercase tracking-wider"
                 >
                   <Link href="/shop" className="flex items-center gap-3">
                     Explore Shop
@@ -146,7 +146,7 @@ export default function HeroBanner({ product, stats }: HeroBannerProps) {
                   <Button 
                     asChild 
                     size="lg"
-                    className="bg-black text-white hover:bg-gray-800 transition-all duration-300 px-8 py-4 text-base font-medium uppercase tracking-wider"
+                    className="bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-all duration-300 px-8 py-4 text-base font-medium uppercase tracking-wider"
                   >
                     <Link href={`/product/detail/${product.slug}`} className="flex items-center gap-3">
                       View Product

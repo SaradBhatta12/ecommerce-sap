@@ -156,14 +156,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <Card 
       className={cn(
-        "group relative overflow-hidden border-0 shadow-sm hover:shadow-xl transition-all duration-300 bg-white",
-        "transform hover:-translate-y-1 cursor-pointer"
+        "group relative overflow-hidden border-0 shadow-sm hover:shadow-xl transition-all duration-300 bg-white dark:bg-gray-800",
+        "transform hover:-translate-y-1 cursor-pointer transition-colors duration-300"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link href={`/product/detail/${product.slug}`} className="block">
-        <div className="relative aspect-square overflow-hidden bg-gray-50">
+        <div className="relative aspect-square overflow-hidden bg-gray-50 dark:bg-gray-700">
           {/* Product Image */}
           <Image
             src={product.images[0] || "/placeholder-image.jpg"}
@@ -179,25 +179,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           
           {/* Loading Overlay */}
           {imageLoading && (
-            <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+            <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 animate-pulse" />
           )}
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
             {product.isNew && (
-              <Badge className="bg-green-500 hover:bg-green-600 text-white font-medium px-2 py-1">
+              <Badge className="bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700 font-medium px-2 py-1 transition-colors duration-300">
                 <Zap className="w-3 h-3 mr-1" />
                 New
               </Badge>
             )}
             {discountPercentage > 0 && (
-              <Badge className="bg-red-500 hover:bg-red-600 text-white font-medium px-2 py-1">
+              <Badge className="bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 font-medium px-2 py-1 transition-colors duration-300">
                 <Percent className="w-3 h-3 mr-1" />
                 {discountPercentage}% OFF
               </Badge>
             )}
             {product.isFeatured && (
-              <Badge className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-2 py-1">
+              <Badge className="bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700 font-medium px-2 py-1 transition-colors duration-300">
                 Featured
               </Badge>
             )}
@@ -209,8 +209,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             variant="secondary"
             className={cn(
               "absolute top-3 right-3 h-9 w-9 p-0 rounded-full shadow-md transition-all duration-200 z-10",
-              "bg-white/90 backdrop-blur-sm hover:bg-white",
-              isInWishlist ? "text-red-500 hover:text-red-600" : "text-gray-600 hover:text-red-500",
+              "bg-white/90 dark:bg-gray-700/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700",
+              isInWishlist ? "text-red-500 hover:text-red-600" : "text-gray-600 dark:text-gray-300 hover:text-red-500",
               isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             )}
             onClick={handleToggleWishlist}
@@ -253,7 +253,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <CardContent className="p-4 space-y-3">
           {/* Category & Brand */}
           {(product.category || product.brand) && (
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               {product.category && (
                 <span className="uppercase tracking-wide font-medium">
                   {product.category.name}
@@ -268,7 +268,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
 
           {/* Product Name */}
-          <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors duration-200">
+          <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
             {product.name}
           </h3>
 
@@ -283,12 +283,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                       "h-3 w-3",
                       i < Math.floor(product.rating!)
                         ? "text-yellow-400 fill-current"
-                        : "text-gray-300"
+                        : "text-gray-300 dark:text-gray-600"
                     )}
                   />
                 ))}
               </div>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 {product.rating} {product.reviews && `(${product.reviews})`}
               </span>
             </div>
@@ -297,11 +297,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Price */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-gray-900">
+              <span className="text-lg font-bold text-gray-900 dark:text-white">
                 {formatPrice(displayPrice)}
               </span>
               {originalPrice && originalPrice !== displayPrice && (
-                <span className="text-sm text-gray-500 line-through">
+                <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
                   {formatPrice(originalPrice)}
                 </span>
               )}
@@ -322,7 +322,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <Button
             className={cn(
               "w-full hidden lg:flex items-center justify-center gap-2 transition-all duration-200",
-              "bg-gray-900 hover:bg-gray-800 text-white"
+              "bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white"
             )}
             onClick={handleAddToCart}
             disabled={isAddingToCart}

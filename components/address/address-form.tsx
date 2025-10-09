@@ -71,12 +71,12 @@ export default function AddressForm({ initialData }: AddressFormProps) {
   });
 
   // Fetch location hierarchy
-  const { data: locationTree } = useGetLocationTreeQuery();
-  const { data: apiProvinces } = useGetLocationsByParentQuery(null);
-  const { data: apiDistricts } = useGetLocationsByParentQuery(formData.province || null, {
+  const { data: locationTree, isLoading: isLoadingTree } = useGetLocationTreeQuery();
+  const { data: apiProvinces, isLoading: isLoadingProvinces } = useGetLocationsByParentQuery(null);
+  const { data: apiDistricts, isLoading: isLoadingDistricts } = useGetLocationsByParentQuery(formData.province || null, {
     skip: !formData.province,
   });
-  const { data: apiLocalities } = useGetLocationsByParentQuery(formData.district || null, {
+  const { data: apiLocalities, isLoading: isLoadingLocalities } = useGetLocationsByParentQuery(formData.district || null, {
     skip: !formData.district,
   });
 
@@ -510,6 +510,7 @@ export default function AddressForm({ initialData }: AddressFormProps) {
             isOpen={showAddressPicker}
             onClose={() => setShowAddressPicker(false)}
             onSelect={(location) => {
+              console.log("Selected location:", location);
               setFormData((prev) => ({
                 ...prev,
                 province: location.province?.name || "",
